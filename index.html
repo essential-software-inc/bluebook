@@ -18625,6 +18625,82 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-08 18:39 | topics: discoverable-setting | AI: Claude (app) | Hidden pages: loose ends from the picture-route fix, audit finished, Technical notes
+       Start state
+         Uploads: index-67.js and webapp-3.html (entries below). Open from the last entry: a possible first-use race on the picture secret, a shared cache that could keep a hidden page's picture for 5 minutes, routes not read (report, comment delete, Teams), no Technical notes section, a reminder about the admin Legal editor.
+       Work done
+         Worker (index-68.js): the picture key now uses the Worker's admin token as key material when it is set (same in every location, so there is no first-use race); the KV secret cfg:hidimg-secret is only the fallback. A hidden page's picture answer is sent private (5 minutes), not public. TECH_NOTES has a new section, Hidden pages: what outsiders get (JSON checked after the edit). [18:39 | discoverable-setting]
+         App: no code change.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The picture secret race and the shared cache for hidden pictures.
+       Found
+         Read and left alone: POST /report/:slug works for a hidden page on purpose (a report must always be possible; also written in Technical notes). DELETE /comment/:id needs the comment's author or the page owner and gives nothing away. Every /teams route needs a sign-in and a team role (handleTeamNote answers 403 to anyone else). The two picture routes cost one KV read and one D1 read per picture; left as is, a cache here would keep a page showing for a while after it is hidden.
+       Important details
+         The admin token as key material: changing it blanks the pictures of hidden pages until the lists reload (noted in Technical notes). Rejected: a separate new secret binding (needs a Cloudflare change before deploy).
+       Removed
+         Nothing.
+       Untested
+         Not run live. node --check passes; the key, deny and private-cache answer were run on mock rows. Not done and not doable from here: publishing the 7 November Terms paragraph from the admin Legal editor (if a version was published there), and the phone test (hide a note from another account, then check search, Published, Subscribed and the stories strip).
+       Depends on
+         Deploy index-68.js. If ADMIN_TOKEN is not set (or under 16 characters) the KV fallback is used. Legal text untouched; Technical notes updated and checked against the code (32 hex characters, 5 minutes, 16 character minimum).
+       Final state
+         Worker and notes agree. Remaining by hand: the admin Legal editor and the phone test.
+       Next
+         Nothing open in code.
+
+     SESSION 2026-11-08 18:34 | topics: discoverable-setting | AI: Claude (app) | Hidden pages: close the cover picture routes without blanking anyone's own cards
+       Start state
+         Uploads were index-66.js and webapp-2.html (the entry below). Left open there: GET /stories/image/:slug and /stories/card-image/:slug served a hidden page's cover pictures to anyone who knew the page name.
+       Work done
+         Worker (index-67.js): both picture routes answer 404 for a page switched off in Teams unless the address carries a key (?k=). The key is an HMAC of the page name and its owner, made with a secret kept in KV (cfg:hidimg-secret, created on first use). It does not expire, so lists the app has stored keep their pictures. hiddenImgKeys adds the key only for pages the viewer owns or is an active editor on; it is in the pictures of the stories strip, My stories, Published, Liked, Subscribed and the publish reply (handleSetStoriesInner). Everyone else's lists carry no key. hiddenSlugsFor now sits on a shared hiddenInfoFor. [18:34 | discoverable-setting]
+         App: nothing changed. It uses the picture addresses exactly as the Worker sends them.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Cover pictures of a hidden page no longer open for outsiders.
+       Found
+         Pictures an outsider already has cached or saved (an address with no key) stop loading on their next refresh, which is the point. A picture address a team member copies keeps working for whoever has it, until the page is shown again or the secret is changed.
+       Important details
+         Rejected: a short-lived token like the page pass (it lasts 30 minutes, so any picture address the app stored would go blank after that). Rejected: checking the sign-in on the picture route (an image load cannot send one).
+       Removed
+         Nothing.
+       Untested
+         Not run live. node --check passes; the key, the deny check and the address builder were run on mock rows (owner and editor get a key, an outsider gets none, no key or a wrong key is denied, a public page is not). Not run: the first-use creation of the secret on Cloudflare, and the app showing the pictures on Published, Subscribed and the strip for a hidden page.
+       Depends on
+         Deploy index-67.js with webapp-3.html (the app is only the log entry; the Worker alone is enough for the fix). KV namespace SLUGS must allow writes (it already does for view passes). Legal text and TECH_NOTES untouched.
+       Final state
+         Every route that takes a page name is gated or answers an outsider as for a missing page.
+       Next
+         Nothing open from this audit.
+
+     SESSION 2026-11-08 18:31 | topics: discoverable-setting | AI: Claude (app) | Hidden pages: audit of the routes that take a page name, and the leaks found
+       Start state
+         Newest uploads: webapp-1.html (this file) and index-65.js (Worker). The Worker already had the comments gate above POST /comments/:slug/sync (fixed earlier today). Neither file had run live.
+       Work done
+         Worker (index-66.js): new hiddenSlugsFor (the pages in a list that are switched off in Teams for this viewer; the viewer's own pages and pages they edit are left out). POST /likes/counts and POST /comments/counts now answer 0 for those pages, the same as a page nobody has liked. [18:31 | discoverable-setting]
+         Worker: GET /author-nav/:slug and GET /author-pages/:slug answer an outsider for a hidden page as for a page that is not there (empty), where they gave the author's other pages (and /author-pages the author's name). POST /stories/:slug/seen answers {ok, recorded:false} for an outsider on a hidden page.
+         App: _nbOpenStoryBySlug no longer opens a cached story straight away: it asks /meta first (and /view-access when hidden), so a note switched off since it was cached shows the toast and no viewer. With no answer from the Worker the cached copy still opens. The Recent pages sheet sends the sign-in with /author-pages so the team still gets the list.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Like and comment counts for hidden pages; cached story opening a hidden page; /author-nav, /author-pages and /stories/:slug/seen showing a hidden page to outsiders.
+       Found
+         GET /stories/image/:slug and /stories/card-image/:slug still serve a hidden page's cover pictures to anyone who knows the page name. Not changed: they are plain <img> loads with no sign-in, so closing them would also blank the author's own cards (Published tab). Needs a decision (signed picture addresses).
+       Important details
+         The count routes give 0 rather than leaving a hidden slug out, so a hidden page cannot be told from one nobody has liked. No view token is read there: the cards that ask have none, and a team member's own pages are let through by account instead.
+       Removed
+         Nothing.
+       Untested
+         Not run live. node --check passes on the Worker; hiddenSlugsFor was run on mock rows (outsider, author, editor, stale row of another owner). The changed app function was syntax-checked on its own, the whole app file was not run. Check on a phone: search a note you have cached, hide it from another account, tap it.
+       Depends on
+         Deploy index-66.js and the new app file together (the app sends the sign-in on /author-pages; the Worker needs it to let the team through). Legal text and TECH_NOTES untouched: no data collected or kept changed.
+       Final state
+         Every route that takes a page name now either calls the gate or answers an outsider as for a missing page, except the two picture routes above.
+       Next
+         Decide how to close the cover picture routes.
+
      SESSION 2026-11-08 09:34 | topics: msg-unread-empty, api-timeout, report-grip, empty-tips, terms-fab-top | AI: Claude (app) | Unread pill, stuck refresh, report grip, empty tips
        Start state
          note-builder-freemium_1.html and index.js (Worker, unchanged this session), index.html (public page).
@@ -22769,9 +22845,12 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
         });
         if (b.total > 1) h += sortSec();
         var tbMax = b.max || 5000, tbFull = !!b.full || b.total >= tbMax, tbNear = !tbFull && b.total >= Math.floor(tbMax * 0.9);
-        h += tbInboxSec('<div class="dz-hint">' + b.total.toLocaleString('en-US') + (b.total === 1 ? ' message' : ' messages') + (tbNear || tbFull ? ' of ' + tbMax.toLocaleString('en-US') : '') + (tbFull ? ' &middot; full, not taking new ones' : b.closed ? ' &middot; not taking new ones' : tbNear ? ' &middot; almost full' : '') + '</div>' +
+        var tbStat = tbFull ? 'full, not taking new ones' : b.closed ? 'not taking new ones' : tbNear ? 'almost full' : '',
+          tbCnt = b.total ? b.total.toLocaleString('en-US') + (b.total === 1 ? ' message' : ' messages') + (tbNear || tbFull ? ' of ' + tbMax.toLocaleString('en-US') : '') : '',
+          tbLine = tbCnt ? tbCnt + (tbStat ? ' &middot; ' + tbStat : '') : tbStat ? tbStat.charAt(0).toUpperCase() + tbStat.slice(1) : ''; // an empty box says "No messages yet." once, not "0 messages" above it
+        h += tbInboxSec((tbLine ? '<div class="dz-hint">' + tbLine + '</div>' : '') +
           (tbFull ? '<div class="dz-hint">This box is full, so new messages are not being saved. Visitors see that it is full. Delete some messages, or use Delete all, and it opens up again right away.</div>' : tbNear ? '<div class="dz-hint">This box keeps up to ' + tbMax.toLocaleString('en-US') + ' messages. Delete some soon so it keeps taking new ones.</div>' : '') +
-          (rows || '<div class="dz-hint">No messages yet.</div>') +
+          (rows || (b.total ? '' : '<div class="dz-hint">No messages yet.</div>')) +
           (tbOwner.next ? '<div class="dz-mq-add">' + owBtn(tbOwner.loading && tbOwner.act === 'tbMore', 'tbMore', '1', 'Load more messages') + '</div>' : ''));
         h += dzSec('Box status', '<div class="dz-mq-add">' + owBtn(tbOwner.loading && tbOwner.act === 'tbCloseNow', 'tbCloseNow', '1', b.closedByOwner ? 'Start taking messages again' : 'Stop taking messages') +
           owBtn(tbOwner.loading && tbOwner.act === 'tbLoad', 'tbLoad', '1', 'Refresh') + '</div>');
@@ -37764,7 +37843,7 @@ async function _nbApLoad() {
   const slug = st.slug, gen = st.gen;
   st.loading = true; st.err = false; _nbApRender();
   try {
-    const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/author-pages/' + encodeURIComponent(slug) + (st.cursor ? '?cursor=' + encodeURIComponent(st.cursor) : ''), { cache: 'no-store' });
+    const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/author-pages/' + encodeURIComponent(slug) + (st.cursor ? '?cursor=' + encodeURIComponent(st.cursor) : ''), { cache: 'no-store', headers: nbIsSignedIn() ? { 'Authorization': 'Bearer ' + nbSessionToken() } : {} }); // [2026-11-08 18:31 | discoverable-setting] changed: sends the sign-in so a page switched off in Teams still lists for its team
     if (!res.ok) throw new Error('author pages ' + res.status);
     const d = await res.json();
     if (gen !== st.gen) return;
@@ -38315,7 +38394,7 @@ function _nbStoryTick(slug) {
 }
 // What /meta/:slug said about the note on screen. authorSub is null for a note published without an account.
 function _nbApplyStoryMeta(slug, data) {
-  if (_nbCurrentStorySlug !== slug || !data || !data.found) return;
+  if (_nbCurrentStorySlug !== slug || !data || !data.found || data.hidden) return; // a page switched off in Teams answers only found + hidden: no author in it, so it says nothing about whether the note has one
   if (typeof data.authorSub === 'string' && data.authorSub) { _nbAdoptStoryAuthor(slug, data.authorSub); return; }
   if (_nbCurrentStoryAuthorSub) return;
   _nbStoryNoAuthorSlug = slug;
@@ -40737,7 +40816,7 @@ function _pubCancelledUnpublishToast(st) {
 function _nbHoldNote(ov, bodyEl, confirmBtn, note) {
   const slug = note.publishedSlug, base = bodyEl.textContent;
   if (!slug) return;
-  fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug), { cache: 'no-store' })
+  fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug), nbIsSignedIn() ? { cache: 'no-store', headers: { 'Authorization': 'Bearer ' + nbSessionToken() } } : { cache: 'no-store' }) // signed in: a page switched off in Teams still answers its author in full
     .then(r => r.ok ? r.json() : null)
     .then(d => { if (d && d.verified && ov.classList.contains('open') && note.publishedSlug === slug && !confirmBtn.disabled && bodyEl.textContent === base) bodyEl.textContent = base + ' This is your verified name, so it stays yours for 30 days. We\u2019ll send you alerts before it\u2019s freed up for anyone to use.'; })
     .catch(() => {});
@@ -43042,8 +43121,8 @@ function nbSearchInputChanged(value) {
 async function _nbOpenStoryBySlug(slug, opts) {
   opts = opts || {};
   const cached = _nbStoriesCache.find(s => s.slug === slug);
-  if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || ''); return true; }
-  if (_pubOfflineGuard()) return false;
+  // [2026-11-08 18:31 | discoverable-setting] changed: a cached story is no longer opened straight away: the Worker is asked first (the author may have switched it off in Teams since it was cached). With no answer at all (offline, a failed call) the cached copy opens as before.
+  if (!cached && _pubOfflineGuard()) return false;
   if (opts.btn) _pubSetBtnLoading(opts.btn, true, '');
   try {
     const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug));
@@ -43051,11 +43130,22 @@ async function _nbOpenStoryBySlug(slug, opts) {
     if (!res.ok) throw new Error('note meta fetch failed: ' + res.status);
     const data = await res.json();
     if (!data || !data.found) { showToast(opts.notFound || 'No note found at that link'); return false; }
-    nbOpenStory(data.slug || slug, data.authorSub || '', data.title || '');
+    if (data.hidden) { // [discoverable-setting] switched off in Teams: only the author and active editors may open it, so ask the Worker before the viewer opens and nobody else sees it load
+      let ok = false;
+      if (nbIsSignedIn()) {
+        const ar = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/view-access/' + encodeURIComponent(slug), { headers: { 'Authorization': 'Bearer ' + nbSessionToken() }, cache: 'no-store' });
+        if (ar.status >= 500) throw new Error('note access check failed: ' + ar.status);
+        const ad = ar.ok ? await ar.json() : null;
+        ok = !!(ad && ad.t);
+      }
+      if (!ok) { showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); return false; }
+    }
+    nbOpenStory(data.slug || slug, data.authorSub || (cached && cached.authorSub) || '', data.title || (cached && cached.title) || '');
     _nbApplyStoryMeta(data.slug || slug, data); // already known here: a note with no author never shows Subscribe, not even for the moment before the reachability check lands
     return true;
   } catch (e) {
     _nbLog('note link open', e);
+    if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || ''); return true; } // no answer from the Worker: the cached copy opens (see the stamp above)
     showToast((opts.failMsg || 'Couldn\u2019t open that link') + _nbFailureReason(e));
     return false;
   } finally {
