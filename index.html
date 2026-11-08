@@ -12201,6 +12201,8 @@ html[data-nb-glass="1"] .blk[data-pl-st="line"] .blk-pl-o{background:transparent
 .blk-tb-ddo.is-selected{color:var(--tb-c);font-weight:600;background:color-mix(in srgb,var(--tb-c) 12%,#fff)}
 .blk-tb-ddo:focus{box-shadow:inset 0 0 0 2px var(--tb-c);background:color-mix(in srgb,var(--tb-c) 8%,#fff)}
 textarea.blk-tb-i{min-height:3rem;resize:vertical;border-radius:min(var(--tb-r),1.25rem)}
+/* [2026-11-08 09:27 | report-grip] same clear resize corner as the report box */
+textarea.blk-tb-i::-webkit-resizer{background:linear-gradient(135deg,transparent 0 44%,rgba(110,118,140,.85) 44% 54%,transparent 54% 66%,rgba(110,118,140,.85) 66% 76%,transparent 76%)}
 .blk-tb-i::placeholder{color:inherit;opacity:.45}
 .blk-tb-i:focus{border-color:var(--tb-c)}
 .blk-tb-i:disabled,.blk-tb-g input:disabled + span{opacity:.55}
@@ -13687,6 +13689,8 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
 .nv-body{padding:.2rem .75rem .75rem;border-top:1px solid #efefea;background:#fafaf8}
 .nv-body .dz-sec{margin:.65rem 0 0}
 .nv-ta{width:100%;box-sizing:border-box;min-height:4.4rem;resize:vertical;border:1px solid #d4d4cd;border-radius:8px;padding:.5rem .6rem;font-family:inherit;font-size:.88rem;color:#2c2c29;background:#fff}
+/* [2026-11-08 09:27 | report-grip] same clear resize corner as the report box */
+.nv-ta::-webkit-resizer{background:linear-gradient(135deg,transparent 0 44%,#7f8aa6 44% 54%,transparent 54% 66%,#7f8aa6 66% 76%,transparent 76%)}
 .nv-icons{display:grid;grid-template-columns:repeat(6,1fr);gap:.35rem}
 .nv-ico{display:flex;align-items:center;justify-content:center;height:2.3rem;border:1px solid #e5e5e0;border-radius:9px;background:#fff;color:#2c2c29;cursor:pointer;padding:0;font:inherit;font-size:.7rem;font-weight:700}
 .nv-ico svg{width:1.1rem;height:1.1rem}
@@ -18621,6 +18625,35 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-08 09:34 | topics: msg-unread-empty, api-timeout, report-grip, empty-tips, terms-fab-top | AI: Claude (app) | Unread pill, stuck refresh, report grip, empty tips
+       Start state
+         note-builder-freemium_1.html and index.js (Worker, unchanged this session), index.html (public page).
+       Work done
+         Messages screen: with the Chat icon shown and no team notes, tapping Unread snapped back to All because the empty branch drew the bar from null, which resets the category. It now draws it from an empty list, keeps Unread selected and says No unread chats. [2026-11-08 09:34 | msg-unread-empty]
+         Stuck refresh: requests to the Worker had no time limit, so one that never answered left _nbMsgBusy (and _ch.busy and the like) set; every later Refresh returned at once, and closing and reopening did not help. One wrapper on fetch (after NB_PUBLISH_API) now aborts a plain Worker request after 25 s (90 s when it sends a body), so every caller gets the usual network failure and retry. Covers the sync, publish, account, teams and text box calls too. [2026-11-08 09:34 | api-timeout]
+         Report box: the native resize corner is now two clear diagonal lines; the same on the text box on a page and the Navbar text area (.nv-ta). [2026-11-08 09:34 | report-grip]
+         Empty state tips: 7 added (publish, Teams, text boxes and forms, polls, payments, publish as an ad, subscribing). [2026-11-08 09:34 | empty-tips]
+         Public page (index.html): the floating button cycles Privacy, Terms, Delete account and holds its size when pinch-zoomed, like the /legal page. [2026-11-08 09:34 | terms-fab-top]
+       Improvements
+         Nothing beyond the list.
+       Fixed
+         As above.
+       Found
+         Privacy and Terms text is identical in the app, the Worker LEGAL_DEFAULTS, the demo, the /legal page and the public page (checked by text hash). A mismatch seen on a hosted page means that page is an older deploy.
+         The first Refresh in the text box Inbox could not be made to stick from the code alone; it has its own 15 s no-answer timer, so it is covered by the new timeout only for the Worker call behind it.
+       Important details
+         The timer stops when the answer starts to arrive, so a slow body is left alone. A request that passes its own signal keeps it. Uploads keep a longer 90 s.
+       Removed
+         Nothing.
+       Untested
+         Driven in a headless browser with a stubbed fetch: Unread pill, a request that never answers, the Messages list recovering. Not run on a device or the real Worker. Tips not looked at on screen.
+       Depends on
+         Deploy index.html. The Worker file is unchanged.
+       Final state
+         See Work done.
+       Next
+         Check the new tips on the empty screens, and watch whether a slow upload ever hits the 90 s limit.
+
      SESSION 2026-11-07 22:15 | topics: review-access | AI: Claude (app) | Test account sign-in for Google Play app review
        Start state
          note-builder-freemium_1.html and index_aad640.js (Worker). Sign-in is Google only, so a reviewer cannot get past it without a Google account.
@@ -18656,7 +18689,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
        Fixed
          Nothing.
        Found
-         The public index.html page still has the older delete text, because it was not uploaded this time and is no longer used for Play.
+         The public index.html page had the older delete text. [2026-11-08 05:21 | legal-page] Updated it to the Worker's words (Delete some of your data included), and regenerated legal-preview.html from the Worker. The demo (index-demo.html) already matched the Worker admin page: only the Overview start date (trMINV) differs on purpose, plus a stamp comment.
        Important details
          Only the Worker page changed (LEGAL_PAGE_DELETE). The app, LEGAL_DEFAULTS and the Privacy and Terms text are unchanged. The page script and its CSP hash are unchanged.
        Removed
@@ -18793,6 +18826,10 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          delete-account     a Delete Your Account part on the public Privacy and Terms page (index.html), the web address for Google Play's Data safety form
          legal-page         the Worker page GET /legal at my-site.name: Privacy Policy, Consumer Terms and Delete Your Account in the welcome page's look (worker index.js)
          review-access      a test account sign-in for Google Play's app review: a review code typed in the invite code box on the sign-in screen (app and worker index.js)
+         msg-unread-empty   the Unread pill on the Messages screen works when there are no team notes (app)
+         api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
+         report-grip        the resize corner on the Report box and two other boxes is clear (app)
+         empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
 
      SESSION 2026-11-07 10:33 | topics: content-rule | AI: Claude (app) | Terms: say what is not allowed, so the Play content rating answers are true
        Start state
@@ -34080,6 +34117,8 @@ function nbBuildStaticNoteHtml(note, publishSlug) {
     #nb-report-select .nb-report-opt.is-selected{color:#3366cc;font-weight:600;background:#f3f6fd}
     #nb-report-select .nb-report-opt:focus{outline:2px solid #3366cc;outline-offset:-2px;background:#eef2fc}
     #nb-report-details:focus{outline:none;border-color:#3366cc;background:#fff}
+    /* [2026-11-08 09:27 | report-grip] the native resize corner was a faint dot on the pale box: draw two clear diagonal lines */
+    #nb-report-details::-webkit-resizer{background:linear-gradient(135deg,transparent 0 44%,#7f8aa6 44% 54%,transparent 54% 66%,#7f8aa6 66% 76%,transparent 76%);border-radius:0 0 10px 0}
     #nb-report-cancel:hover{background:#f4f5f8;border-color:#d6dae8}
     #nb-report-submit:hover{background:#2c58b3}
     #nb-report-submit:active{transform:scale(.97)}
@@ -34618,6 +34657,20 @@ function _nbDownloadHtmlBlob(blob, fileName, reason) {
 // [2026-10-31 ??:?? | custom-domain] The publish address moved from the worker's workers.dev address to my-site.name (a Cloudflare custom domain on the note-publish worker).
 // This one constant drives every worker call and the share links. Keep workers.dev switched on in Cloudflare: installed apps and already published pages still call it.
 const NB_PUBLISH_API = 'https://my-site.name';
+// [2026-11-08 09:33 | api-timeout] changed: every request to the Worker gives up on a connection that never answers (25 s for a read, 90 s when a body is sent),
+// instead of waiting for ever. A stalled request left Refresh and the Messages list on a spinner for good: the busy flags (_nbMsgBusy, _ch.busy and the
+// like) were never cleared, so every later refresh returned at once. The abort is a network failure to every caller, so the usual retry and offline
+// messages apply. A caller that passes its own signal keeps it, other sites are untouched, and the timer stops when the answer starts to arrive.
+(function () {
+  if (typeof AbortController === 'undefined' || typeof window.fetch !== 'function') return;
+  const _fetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    let url = ''; try { url = typeof input === 'string' ? input : (input && input.url) || ''; } catch (e) {}
+    if (typeof input !== 'string' || url.indexOf(NB_PUBLISH_API) !== 0 || (init && init.signal)) return _fetch(input, init); // only plain Worker addresses; a Request object brings its own signal
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), (init && init.body) ? 90000 : 25000);
+    return _fetch(input, Object.assign({}, init, { signal: ctl.signal })).finally(() => clearTimeout(t));
+  };
+})();
 // [2026-10-31 ??:?? | custom-domain] Older published links and pages still use the worker's original address, so note links on it keep opening in the app.
 const NB_LEGACY_PUBLISH_HOSTS = ['note-publish.joelisaacumoh.workers.dev'];
 let _pubNoteId = null;
@@ -38382,7 +38435,15 @@ const NB_EMPTY_LEADS = [
   { t: 'Sign in to sync your notes between devices and keep an automatic backup. ', need: 'out' },
   { t: 'Save your notes to a file, or restore them from one, with Backup & restore in Settings. ' },
   { t: 'Pick a Light, Dark, or Pink theme, or switch Glass mode on or off, in Settings. ' },
-  { t: 'Sort your notes by recently edited, newest, oldest, or A\u2013Z in Settings. ', need: 'notes' }
+  { t: 'Sort your notes by recently edited, newest, oldest, or A\u2013Z in Settings. ', need: 'notes' },
+  // [2026-11-08 09:27 | empty-tips] added: publishing, Teams, text boxes, polls, payments, ads and subscribing were not covered yet
+  { t: 'Publish a note to share it as a web page with its own link. ', need: 'notes' },
+  { t: 'Invite editors to a published note to edit it together and chat about it. ', need: 'notes' },
+  { t: 'Add a text box or form to a published page, and messages from visitors arrive in the app. ', need: 'notes' },
+  { t: 'Add a poll to a published page and watch the votes come in. ', need: 'notes' },
+  { t: 'Add a Payments block to a published page to take payments from your visitors. ', need: 'notes' },
+  { t: 'Publish a note as an ad to get it seen by more people. ', need: 'notes' },
+  { t: 'Subscribe to authors you like to see their new stories in Subscribed. ' }
 ];
 // Rotates so the empty states cover the whole app, not just Write: starts on the next one each launch
 // and moves on whenever a category is picked, so it stays put across re-renders of the same list.
@@ -43729,7 +43790,8 @@ function _nbMsgRenderList() {
   const empty = (t, s, btn) => '<div class="msg-empty">' + CH_SVG.chat.replace('width="26" height="26"', 'width="46" height="46"') + '<div class="msg-empty-t">' + esc(t) + '</div>' + esc(s) + (btn || '') + '</div>';
   if (!nbIsSignedIn()) { _nbMsgBar(null); el.innerHTML = empty('Sign in to see team chats', 'A chat belongs to a note you share with editors, or one you edit for someone else.', '<br><button type="button" class="rdlg-ok rdlg-ok--blue" onclick="nbAccountBtnClick()">Sign in</button>'); return; }
   let notes = _nbMsgTeamNotes();
-  if (!notes.length) { _nbMsgBar(null); el.innerHTML = empty('No team chats yet', 'Invite editors to a published note, or accept an invitation to edit someone else\u2019s. Its chat shows up here.'); return; }
+  // [2026-11-08 09:27 | msg-unread-empty] changed: with no team notes the bar is drawn from an empty list (not cleared with null), so tapping Unread keeps it selected instead of snapping back to All, and says there is nothing unread.
+  if (!notes.length) { _nbMsgBar([]); el.innerHTML = _nbMsgCat === 'unread' ? empty('No unread chats', 'You\u2019re all caught up.') : empty('No team chats yet', 'Invite editors to a published note, or accept an invitation to edit someone else\u2019s. Its chat shows up here.'); return; }
   const lastAt = n => { const c = _nbMsgChats[n.publishedSlug]; return (c && c.last && c.last.createdAt) || 0; };
   notes = _nbStSort(notes).map((n, i) => [n, i]).sort((a, b) => lastAt(b[0]) - lastAt(a[0]) || a[1] - b[1]).map(x => x[0]);
   _nbMsgBar(notes);
