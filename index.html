@@ -18621,6 +18621,55 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-07 22:15 | topics: review-access | AI: Claude (app) | Test account sign-in for Google Play app review
+       Start state
+         note-builder-freemium_1.html and index_aad640.js (Worker). Sign-in is Google only, so a reviewer cannot get past it without a Google account.
+       Work done
+         Worker: POST /auth/review/check {code} answers yes or no (for the button text) and POST /auth/review {code} signs in to one fixed account (review-account, test-account@my-site.name) the same way /auth/google does, with reviewer: true. Each sign-in tops the account up to 20 MB of page space and 5,000 ad views (ledger reason review). The code is the constant REVIEW_ACCESS_CODE in the Worker (BLUEBOOK; 8 to 12 letters and digits, not case sensitive); a Worker variable of the same name overrides it. Wrong guesses are limited per IP (fail closed). Setting the constant to '' and deploying (or setting the variable to empty) turns both routes off and ends the test account's sessions. [2026-11-07 22:15 | review-access]
+         App: typing the review code in the invite code box (checked with the Worker after 8 characters) changes the Sign in with Google button to Sign in to test account and the message to Test account code accepted. Tapping it signs in through /auth/review, never stores the code as a friend invite, and nbIsPro() is true while the signed-in account is the test account. [2026-11-07 22:15 | review-access]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Ad packages above 1,000 views stay locked by standing (AD_TIERS), so the test account does not unlock them. Teams still need App Lock on. Any friend invite code of 8 or more characters typed on the sign-in screen is now sent to the Worker for a yes or no, before sign-in; it is not stored or logged.
+       Important details
+         Pro is only a cached flag on the phone (RevenueCat), so the test account gets it from the account, not from RevenueCat; the logIn to RevenueCat is skipped for it. The code is never in the app. Rejected: a code kept in the app (anyone could read it), and a switch in the admin page (removing the variable is already instant).
+       Removed
+         Nothing.
+       Untested
+         Worker routes tested locally with stubbed storage: right and wrong code, rate limit path, disabled, session ends when disabled. App driven in a headless browser with a mocked Worker: button text, message, no friend invite stored, sign-in, Pro on and off. Not run against the real Worker, the real device or Play Billing. Changed later in the same session so the code is a constant in the Worker; checked again: works with no variable set, an empty variable switches it off.
+       Depends on
+         Deploy index_aad640.js (rename to index.js) and a new app build. The code is already in the Worker (BLUEBOOK); nothing to set in Cloudflare. Privacy and Terms untouched.
+       Final state
+         The invite code box on sign-in accepts the review code (BLUEBOOK) and signs in to the test account.
+       Next
+         Put the code and these steps in the Play Console Sign in details. After review set REVIEW_ACCESS_CODE to '' and deploy.
+
+     SESSION 2026-11-07 18:57 | topics: legal-page | AI: Claude (app) | Delete some of your data, for the Play Data safety Manage app data link
+       Start state
+         Uploaded note-builder-freemium_1.html and index_aad640.js (Worker); both identical to the last session's files. The Play Data safety preview links Manage app data to my-site.name/legal#delete-account, but that part only covered deleting the whole account.
+       Work done
+         The Delete Your Account part on GET /legal now has a Delete some of your data section: what people can remove in the app (unpublish a page or story, delete their own comments, take back likes and subscriptions, remove an ad, remove an editor) and how to ask for anything else by email, with a note that a few records may be kept. The intro points to it. [2026-11-07 18:57 | legal-page]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         The public index.html page still has the older delete text, because it was not uploaded this time and is no longer used for Play.
+       Important details
+         Only the Worker page changed (LEGAL_PAGE_DELETE). The app, LEGAL_DEFAULTS and the Privacy and Terms text are unchanged. The page script and its CSP hash are unchanged.
+       Removed
+         Nothing.
+       Untested
+         Not deployed. After deploying, open my-site.name/legal#delete-account and read the new section.
+       Depends on
+         Deploy index_aad640.js. The Play Console links need no change.
+       Final state
+         The Manage app data link now lands on text that matches it.
+       Next
+         Submit the Data safety form.
+
      SESSION 2026-11-07 17:05 | topics: legal-page | AI: Claude (app) | Privacy, Terms and Delete Your Account served by the Worker, so Play does not need a separate site
        Start state
          index_1.js (Worker) with the welcome page at GET /, and index.html (the same text on a separate public page). The Play listing needs a Privacy Policy address and an account deletion address.
@@ -18743,6 +18792,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          terms-fab-top      the floating button on the public Terms page has a small Back to top arrow, and reads just Terms / Privacy (index.html)
          delete-account     a Delete Your Account part on the public Privacy and Terms page (index.html), the web address for Google Play's Data safety form
          legal-page         the Worker page GET /legal at my-site.name: Privacy Policy, Consumer Terms and Delete Your Account in the welcome page's look (worker index.js)
+         review-access      a test account sign-in for Google Play's app review: a review code typed in the invite code box on the sign-in screen (app and worker index.js)
 
      SESSION 2026-11-07 10:33 | topics: content-rule | AI: Claude (app) | Terms: say what is not allowed, so the Play content rating answers are true
        Start state
@@ -30512,7 +30562,10 @@ async function nbRefreshProStatus() {
 // hitting RevenueCat on every check — it's kept in sync by
 // nbRefreshProStatus(), nbPurchasePro(), and nbRestorePurchases().
 function nbIsPro() {
-  try { return localStorage.getItem('nbProUnlocked') === '1'; } catch (e) { return false; }
+  try { if (localStorage.getItem('nbProUnlocked') === '1') return true; } catch (e) { return false; }
+  // [2026-11-07 22:14 | review-access] the test account counts as Pro while it is the signed-in account
+  const acct = nbAccount();
+  return !!(acct && acct.reviewer && nbSessionToken());
 }
 function nbAtFreeNoteLimit() {
   if (nbIsPro()) return false;
@@ -31519,6 +31572,7 @@ function _nbStSigninBusy(busy) {
   }
 }
 async function nbSignInWithGoogle(origin) {
+  if (_nbReviewCode) return nbSignInReview(origin); // [2026-11-07 22:14 | review-access] a test account code was accepted
   window._nbSigninOrigin = origin === 'settings' ? 'settings' : 'screen';
   console.log('[nb] signin tapped, onLine=', navigator.onLine, 'GAuth=', !!_nbGoogleAuthPlugin());
   if (_pubOfflineGuard()) { console.log('[nb] blocked by offline guard'); return; }
@@ -31586,29 +31640,29 @@ async function nbSignInWithGoogle(origin) {
     window._nbSigninOrigin = null;
   }
 }
-async function _nbCompleteGoogleSignIn(idToken) {
-  const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/auth/google', {
+async function _nbCompleteGoogleSignIn(idToken, reviewCode) { // [2026-11-07 22:14 | review-access] reviewCode = the test account sign-in (no Google token)
+  const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + (reviewCode ? '/auth/review' : '/auth/google'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken })
+    body: JSON.stringify(reviewCode ? { code: reviewCode } : { idToken })
   });
-  if (!res.ok) throw new Error('auth/google failed: ' + res.status);
+  if (!res.ok) throw new Error((reviewCode ? 'auth/review failed: ' : 'auth/google failed: ') + res.status);
   const data = await res.json();
   try {
     localStorage.setItem(NB_SESSION_KEY, data.sessionToken);
     _nbSyncEtag = null; _nbSyncBaseline = null; _nbLastPushedPayload = null; _nbLastPushedEtag = null; // a new session never inherits another account's baseline
-    localStorage.setItem(NB_ACCOUNT_KEY, JSON.stringify({ sub: data.sub, email: data.email, authorId: data.authorId || undefined }));
+    localStorage.setItem(NB_ACCOUNT_KEY, JSON.stringify({ sub: data.sub, email: data.email, authorId: data.authorId || undefined, reviewer: data.reviewer ? true : undefined }));
   } catch (e) {}
   // Re-homes the RevenueCat identity onto this Google account (rather
   // than the anonymous per-install ID Purchases.configure() started
   // with) so a purchase made here is visible after signing into the
   // same account on another device via Restore Purchases.
   const Purchases = _nbRcPlugin();
-  if (Purchases) {
+  if (Purchases && !data.reviewer) { // the test account has no purchase identity
     try { await Purchases.logIn({ appUserID: data.sub }); await nbRefreshProStatus(); }
     catch (e) { _nbLog('RevenueCat logIn', e); }
   }
-  showToast(data.deletionCancelled
+  showToast(data.reviewer ? 'Signed in to the test account' : data.deletionCancelled
     ? 'Signed in as ' + (window._nbMaskEmail ? window._nbMaskEmail(data.email) : data.email) + '. Account deletion cancelled.'
     : 'Signed in as ' + (window._nbMaskEmail ? window._nbMaskEmail(data.email) : data.email));
   // Sign-in itself has now succeeded — release the button here rather
@@ -40900,6 +40954,51 @@ function nbSigninInviteInput(v) {
       localStorage.setItem(NB_PENDING_INVITE_FOLLOW_KEY, fc && fc.checked ? '1' : '0');
     } else { localStorage.removeItem(NB_PENDING_INVITE_KEY); localStorage.removeItem(NB_PENDING_INVITE_FOLLOW_KEY); }
   } catch (e) {}
+  _nbReviewProbe(code);
+}
+// [2026-11-07 22:14 | review-access] Test account for Google Play's app review. When what is typed in the invite code box is the review code
+// (the Worker answers yes or no; nothing else about it lives in the app), the button says it signs in to a test account and
+// tapping it uses POST /auth/review instead of Google. To turn it off remove REVIEW_ACCESS_CODE from the Worker; nothing here changes.
+let _nbReviewCode = '', _nbReviewProbeT = 0, _nbReviewProbeSeq = 0;
+function _nbReviewSet(code) {
+  _nbReviewCode = code || '';
+  const btn = document.getElementById('account-signin-btn');
+  if (btn && !btn.disabled) btn.textContent = code ? 'Sign in to test account' : 'Sign in with Google';
+  const msg = document.getElementById('account-invite-msg');
+  if (msg) msg.textContent = code ? 'Test account code accepted.' : 'We\u2019ll add it when you sign in.';
+  if (code) { try { localStorage.removeItem(NB_PENDING_INVITE_KEY); localStorage.removeItem(NB_PENDING_INVITE_FOLLOW_KEY); } catch (e) {} }
+}
+function _nbReviewProbe(code) {
+  clearTimeout(_nbReviewProbeT);
+  const seq = ++_nbReviewProbeSeq;
+  if (code.length < 8) { if (_nbReviewCode) _nbReviewSet(''); return; }
+  _nbReviewProbeT = setTimeout(async () => {
+    try {
+      const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/auth/review/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) });
+      if (seq !== _nbReviewProbeSeq) return;
+      const d = res.ok ? await res.json() : null;
+      _nbReviewSet(d && d.ok ? code : '');
+    } catch (e) { if (seq === _nbReviewProbeSeq) _nbReviewSet(''); }
+  }, 400);
+}
+async function nbSignInReview(origin) {
+  window._nbSigninOrigin = origin === 'settings' ? 'settings' : 'screen';
+  if (_pubOfflineGuard()) return;
+  const btn = document.getElementById('account-signin-btn');
+  if (btn) _pubSetBtnLoading(btn, true, 'Signing in\u2026');
+  _nbStSigninBusy(true);
+  try {
+    await _nbCompleteGoogleSignIn(null, _nbReviewCode);
+    _nbClearPendingInvite();
+    _nbReviewSet('');
+  } catch (e) {
+    _nbLog('test account sign-in', e);
+    showToast('Sign-in failed' + (_nbFailureReason(e) || '. Try again.'));
+  } finally {
+    if (btn && btn.disabled) _pubSetBtnLoading(btn, false);
+    _nbStSigninBusy(false);
+    window._nbSigninOrigin = null;
+  }
 }
 function _nbClearPendingInvite() {
   try { localStorage.removeItem(NB_PENDING_INVITE_KEY); localStorage.removeItem(NB_PENDING_INVITE_FOLLOW_KEY); } catch (e) {}
