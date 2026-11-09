@@ -7632,7 +7632,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <h3>Changes to this policy</h3>
       <p>We may update this policy from time to time. When we do, we'll change the date at the top, and we may also send you an alert. If you keep using the app after a change, that means you're OK with it.</p>
       <h3>Contact</h3>
-      <p>Questions about this policy? We're happy to help at <a href="mailto:essentialsoftware.support@gmail.com">essentialsoftware.support@gmail.com</a>.</p>
+      <p>Questions about this policy? We're happy to help at <a href="mailto:support@my-site.name">support@my-site.name</a>.</p>
     </div>
   </div>
 </div>
@@ -7779,7 +7779,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <p>A page over 5 MB uses 1 MB of your page space for every MB over 5 MB, rounded up. If the page gets bigger, it uses more. If it gets smaller, or you unpublish it, or we take it down, the space is returned to your balance. If an editor makes a page bigger, the space comes from the author's balance. A page over 5 MB can't be used as an ad.</p>
       <p>Page space is a one-time purchase, not a subscription. It can't be cashed out or handed to someone else, and any balance goes unused if your account is deleted. If Google Play refunds a pack, we take that space back. If that leaves you short, we may unpublish pages that were using it, and we'll send you an alert for each one. You can publish a page again once you have enough page space. For the purchase itself, see Google Play's own refund policy. If we fail to deliver page space you paid for, we'll decide whether to credit or refund it. That's separate from Google Play's own refund process.</p>
       <h3>Reserved Names &amp; Verified Ticks</h3>
-      <p>If you ask us, and we agree, we may keep a page address safe just for you, such as a name you already use somewhere else. This is called a reserved name. We hold it for the email address you give us for 90 days. If you sign in with Google using that same email and publish a page at that address in that time, the name becomes yours. After that, only your account can publish to it. If you unpublish the page, the name stays yours for 30 days, and we'll send you alerts before it's freed up. If you'd like it freed sooner, email us at essentialsoftware.support@gmail.com and we'll release it, and the tick goes with it. While you hold a verified name, your display name is locked to the one we checked when the name became yours. To change it, email us at the same address. If we have to remove your display name, for example because it doesn't fit your verified name, we may remove the verified name too, and we'll tell you. If nobody claims a reserved name within 90 days, we cancel it, and anyone can use the address if it's free.</p>
+      <p>If you ask us, and we agree, we may keep a page address safe just for you, such as a name you already use somewhere else. This is called a reserved name. We hold it for the email address you give us for 90 days. If you sign in with Google using that same email and publish a page at that address in that time, the name becomes yours. After that, only your account can publish to it. If you unpublish the page, the name stays yours for 30 days, and we'll send you alerts before it's freed up. If you'd like it freed sooner, email us at support@my-site.name and we'll release it, and the tick goes with it. While you hold a verified name, your display name is locked to the one we checked when the name became yours. To change it, email us at the same address. If we have to remove your display name, for example because it doesn't fit your verified name, we may remove the verified name too, and we'll tell you. If nobody claims a reserved name within 90 days, we cancel it, and anyone can use the address if it's free.</p>
       <p>A page on a verified name shows a tick. A page by someone who holds a verified name, but that isn't on that name, shows a ring tick instead. All the tick means is that Bluebook checked that the account behind the page signed in with the email we invited. It doesn't mean we agree with what the page says, and it isn't a promise about who someone is anywhere else. Please don't pretend to be someone else, and please don't make a copy of the tick, or anything that looks like it, on your own page. A reserved name isn't something you own. You can't sell it or hand it to anyone else. We may take back a reserved name, or the tick, if it's used to fool people or breaks these terms. If you delete your account, we free up the name.</p>
       
       <h3>Reports, Alerts &amp; Suspension</h3>
@@ -7833,7 +7833,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <h3>Changes to These Terms</h3>
       <p>We may update these terms from time to time. If you keep using the app after changes are posted, you're accepting the revised terms.</p>
       <h3>Contact</h3>
-      <p>Questions about these terms? We're happy to help at <a href="mailto:essentialsoftware.support@gmail.com">essentialsoftware.support@gmail.com</a>.</p>
+      <p>Questions about these terms? We're happy to help at <a href="mailto:support@my-site.name">support@my-site.name</a>.</p>
     </div>
   </div>
 </div>
@@ -18625,6 +18625,31 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-08 00:50 | topics: support-address | AI: Claude (app) | Contact address moved to support@my-site.name
+       Start state
+         Uploads: index-68.js and webapp-4.html. The contact address in the Privacy Policy, Consumer Terms, the Delete Your Account page, the verified-name sentence and the locked-name message was essentialsoftware.support@gmail.com. Email Routing now forwards support@my-site.name to that Gmail.
+       Work done
+         Worker (index-69.js): the address in LEGAL_DEFAULTS (Privacy and Terms) and LEGAL_PAGE_DELETE is now support@my-site.name. [00:50 | support-address]
+         App (webapp-5.html): the same address in its built-in Privacy Policy and Terms copies (word for word with the Worker), the verified-name sentence and _NB_NAME_LOCKED_MSG.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         A Privacy Policy or Terms version already published from the admin Legal editor still carries the old address, and the app shows that in place of its built-in copy.
+       Important details
+         This log's older entries still name the old Gmail address, on purpose: they are history (the by-email step in the 7 November session still means that mailbox, which now receives the forward).
+       Removed
+         Nothing.
+       Untested
+         Not run. node --check passes on the Worker; the app file was only searched and edited for the address. Not checked: the text on the Play Store listing and any other place outside these two files.
+       Depends on
+         Deploy index-69.js with webapp-5.html together (the copies must match). Then, in the admin Legal editor, publish Privacy and Terms again with the new address if a version was ever published there.
+       Final state
+         The address appears as support@my-site.name in all live text in both files.
+       Next
+         Update the Play Store listing and any other place that shows the old address.
+
      SESSION 2026-11-08 18:39 | topics: discoverable-setting | AI: Claude (app) | Hidden pages: loose ends from the picture-route fix, audit finished, Technical notes
        Start state
          Uploads: index-67.js and webapp-3.html (entries below). Open from the last entry: a possible first-use race on the picture secret, a shared cache that could keep a hidden page's picture for 5 minutes, routes not read (report, comment delete, Teams), no Technical notes section, a reminder about the admin Legal editor.
@@ -40071,7 +40096,7 @@ function _nbLoadCachedProfileName() {
 let _nbProfileNameSeq = 0; // bumped when a name save starts/finishes, so an older GET can't land over it
 // [verified-names] The server locks the display name while the account holds a verified name (GET /account/profile-name says nameLocked).
 let _nbProfileNameLocked = false;
-const _NB_NAME_LOCKED_MSG = 'Your display name is locked because you have a verified name. To change it, email essentialsoftware.support@gmail.com.';
+const _NB_NAME_LOCKED_MSG = 'Your display name is locked because you have a verified name. To change it, email support@my-site.name.'; // [2026-11-08 00:49 | discoverable-setting] changed: the address was essentialsoftware.support@gmail.com
 // Resolves true when the answer is settled (applied, superseded, or nothing to do)
 // and false when it couldn't be fetched, so the reconnect retry knows to try again.
 // `silent` skips the failure toast for those background retries.
