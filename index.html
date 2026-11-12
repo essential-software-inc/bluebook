@@ -30006,6 +30006,7 @@ window._nbSyncBars = function () {
       if (window._nbBarsLast === hex) return;
       window._nbBarsLast = hex;
       NbBars.setBg(hex);
+      if (NbBars.setIcons) NbBars.setIcons(((parseInt(hex.substr(1, 2), 16) * 299 + parseInt(hex.substr(3, 2), 16) * 587 + parseInt(hex.substr(5, 2), 16) * 114) / 255000) > 0.5); // dark status/nav icons on a light page, light icons on Night
     } catch (e) {}
   });
 };
