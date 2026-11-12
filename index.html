@@ -29989,6 +29989,28 @@ const DK = 'nb_theme_v1';
 // theme itself so the newest change wins across devices — see _nbMergeIncomingTheme.
 const NB_THEME_TS_KEY = 'nb_theme_ts_v1';
 function _nbThemeTs() { try { return parseInt(localStorage.getItem(NB_THEME_TS_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
+/* [2026-11-12 | nav-bar-color] Android app only: paint the phone's bottom navigation area in the page background, in every theme and in glass or classic mode. The WebView ignores <meta theme-color>, so the native NbBars bridge (added by the MainActivity patch in codemagic.yaml) does it. No bridge (browser, iOS) means this does nothing. */
+window._nbSyncBars = function () {
+  if (window._nbBarsRaf) cancelAnimationFrame(window._nbBarsRaf);
+  window._nbBarsRaf = requestAnimationFrame(function () {
+    try {
+      if (!window.NbBars || !document.body) return;
+      var b = document.body, cs = getComputedStyle(b);
+      var col = (cs.getPropertyValue('--nb-bg') || '').trim() || cs.backgroundColor;
+      var t = document.createElement('i'); t.style.color = col; b.appendChild(t);
+      var rgb = getComputedStyle(t).color; b.removeChild(t);
+      var m = rgb.match(/[\d.]+/g);
+      var hex = (m && m.length >= 3 && !(m[3] !== undefined && +m[3] === 0))
+        ? '#' + m.slice(0, 3).map(function (n) { return ('0' + Math.round(+n).toString(16)).slice(-2); }).join('')
+        : (b.classList.contains('night') ? '#080808' : b.classList.contains('pink') ? '#fff8fb' : '#ffffff');
+      if (window._nbBarsLast === hex) return;
+      window._nbBarsLast = hex;
+      NbBars.setBg(hex);
+    } catch (e) {}
+  });
+};
+window.addEventListener('load', function () { window._nbSyncBars(); setTimeout(window._nbSyncBars, 1500); });
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { window._nbBarsLast = null; window._nbSyncBars(); } });
 function applyTheme(mode) {
   document.body.classList.toggle('night', mode === 'dark');
   document.body.classList.toggle('pink', mode === 'pink');
@@ -30004,6 +30026,7 @@ function applyTheme(mode) {
   let tc = document.querySelector('meta[name="theme-color"]');
   if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
   tc.content = themeColor;
+  if (typeof window._nbSyncBars === 'function') window._nbSyncBars();
   if (typeof window._nbStRefresh === 'function') window._nbStRefresh();
 }
 function cycleTheme() {
@@ -30051,6 +30074,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
     const glass = !!window._nbSt('glassMode');
     document.body.classList.toggle('glass', glass);
     document.querySelectorAll('style[data-nb-glass]').forEach(el => { el.media = glass ? 'all' : 'not all'; });
+    if (typeof window._nbSyncBars === 'function') window._nbSyncBars();
   }
   window._nbSt = function (k) {
     if (!S) load();
