@@ -7655,8 +7655,8 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <button class="lg-find-btn" id="about-find-next" type="button" aria-label="Next match" disabled><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,8 10,14 16,8"/></svg></button>
     </div>
     <div id="about-body">
-      <h1>Bluebook: Notes, Stories &amp; People</h1>
-      <blockquote><p>Build scrapbook-style notes and mini websites from blocks: text, photos, voice notes, videos, music, polls, forms, payment buttons and more. Keep them private, or publish them as a link or a 24-hour Story and grow an audience.</p></blockquote>
+      <h1>Bluebook: Notes, Stories &amp; Websites</h1>
+      <blockquote><p>Make scrapbook-style pages from simple blocks: text, photos, voice notes, videos, music, polls, forms, payment buttons and more. Keep them private, or publish them as a link or a 24-hour Story and grow an audience.</p></blockquote>
       <p>Bluebook is a block-based editor for rich, visual notes. Write a journal, plan a trip, collect recipes, build a mood board, or publish a whole page. Arrange everything exactly how you want it.</p>
       <h2>Build your page</h2>
       <p>Tap a block in the toolbar to add it:</p>
@@ -7738,7 +7738,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
         <li>Unlimited notes</li>
         <li>Restoring notes from backup files</li>
       </ul>
-      <p>Bluebook brings together notes, stories, and people, so you can create, share, and grow.</p>
+      <p>Bluebook is the place for notes, stories, and websites. Make them, share them, and watch them grow.</p>
     </div>
   </div>
 </div>
@@ -37202,7 +37202,7 @@ function _nbPaintStoriesStrip() {
           ? `<img class="nb-story-ring-img" src="${esc(s.imageUrl)}" alt="" loading="lazy" onerror="_nbStoryImgError(this,'${initialAttr}')">`
           : `<span class="nb-story-ring-inner">${esc(initial)}</span>`);
     return `
-    <button class="nb-story-item" onclick="nbOpenStory('${sid}','${asub}','${title}', true)">
+    <button class="nb-story-item" onclick="nbOpenStoryChecked('${sid}','${asub}','${title}', true)">
       <span class="nb-story-ring${s.seen ? ' seen' : ''}">${avatarInner}${s.verified ? _NB_VERIFIED_BADGE : (s.verifiedProfile ? _NB_VERIFIED_PROFILE_BADGE : '')}</span>
       <span class="nb-story-label">${esc(s.title || 'Untitled')}</span>
     </button>`;
@@ -39810,7 +39810,7 @@ function _nbSubCardHtmlRaw(s) {
   const showAuthor = s.authorProfileName && _nbActiveCat !== 'Published'; // your own notes don't need your name on them
   // Same action buttons as a normal card, wired to the local copy (none if that note hasn't synced to this device yet).
   // Your own notes open in the editor (like a card in All); the story viewer is the fallback if the local copy isn't on this device.
-  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : `nbOpenStory('${sid}','${asub}','${title}')`;
+  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : `nbOpenStoryChecked('${sid}','${asub}','${title}')`;
   return `
       <div class="guide-card" data-slug="${esc(s.slug)}" onclick="${open}" role="button" tabindex="0" onkeydown="if (event.key==='Enter') { ${open} }">
         ${showAuthor ? `<span class="gc-author-name">${esc(s.authorProfileName)}${s.verified ? _NB_VERIFIED_TICK : (s.verifiedProfile ? _NB_VERIFIED_PROFILE_TICK : '')}</span>` : ''}
@@ -43145,7 +43145,7 @@ function nbSearchInputChanged(value) {
 // Shared by the feed's paste-a-link box and the Media screen's "Go to note". Resolves true once the viewer is open.
 async function _nbOpenStoryBySlug(slug, opts) {
   opts = opts || {};
-  const cached = _nbStoriesCache.find(s => s.slug === slug);
+  const cached = _nbStoriesCache.find(s => s.slug === slug) || (opts.authorSub ? { slug: slug, authorSub: opts.authorSub, title: opts.title || '' } : null); // opts.authorSub: a card or strip item that already knows its author
   // [2026-11-08 18:31 | discoverable-setting] changed: a cached story is no longer opened straight away: the Worker is asked first (the author may have switched it off in Teams since it was cached). With no answer at all (offline, a failed call) the cached copy opens as before.
   if (!cached && _pubOfflineGuard()) return false;
   if (opts.btn) _pubSetBtnLoading(opts.btn, true, '');
@@ -43165,17 +43165,21 @@ async function _nbOpenStoryBySlug(slug, opts) {
       }
       if (!ok) { showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); return false; }
     }
-    nbOpenStory(data.slug || slug, data.authorSub || (cached && cached.authorSub) || '', data.title || (cached && cached.title) || '');
+    nbOpenStory(data.slug || slug, data.authorSub || (cached && cached.authorSub) || '', data.title || (cached && cached.title) || '', opts.markSeen);
     _nbApplyStoryMeta(data.slug || slug, data); // already known here: a note with no author never shows Subscribe, not even for the moment before the reachability check lands
     return true;
   } catch (e) {
     _nbLog('note link open', e);
-    if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || ''); return true; } // no answer from the Worker: the cached copy opens (see the stamp above)
+    if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || '', opts.markSeen); return true; } // no answer from the Worker: the cached copy opens (see the stamp above)
     showToast((opts.failMsg || 'Couldn\u2019t open that link') + _nbFailureReason(e));
     return false;
   } finally {
     if (opts.btn) _pubSetBtnLoading(opts.btn, false);
   }
+}
+// Card / strip / media opens: same /meta check as a pasted link, so a note switched off in Teams shows the toast and never the viewer.
+function nbOpenStoryChecked(slug, authorSub, title, markSeen) {
+  return _nbOpenStoryBySlug(slug, { authorSub: authorSub, title: title, markSeen: markSeen, notFound: 'That note isn\u2019t available anymore', failMsg: 'Couldn\u2019t open that note' });
 }
 async function nbGoToNoteLink() {
   const input = document.getElementById('feed-search-input');
@@ -47311,7 +47315,12 @@ function nbBuildSafeHtml(htmlSrc, uiState, draftId, repost) {
   Object.keys(_cvAccentByTheme.fills).forEach(function (origHex) {
     htmlSrc = htmlSrc.split('#' + origHex).join('#' + _cvAccentByTheme.fills[origHex]);
   });
-  return `<!DOCTYPE html><html${repost ? ' class="nb-repost"' : ''}><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="referrer" content="strict-origin-when-cross-origin"><style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:#fff;color:#1a1a1a}</style>${_noScrollbarCss}</head><body>${_uiStateGlobals}${_repostGlobal}${_scrollBridge}${htmlSrc}${_errRelay}${_NB_NOTE_UI_STATE_SCRIPT}</body></html>`;
+  return `<!DOCTYPE html><html${repost ? ' class="nb-repost"' : ''}><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="referrer" content="strict-origin-when-cross-origin"><style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:#fff;color:#1a1a1a}
+/* [edge-to-edge sheets] Every bottom sheet spans the full width of the screen on any device: no max-width cap, no side gap. Last in the cascade so it wins over the per-sheet rules above. */
+#edit-dialog, #backup-sheet, #publish-sheet, #account-dialog, #ap-sheet, #ch-sheet-box, #md-sheet-box,
+#ch-pick .img-pick-box, .img-pick-box { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; box-sizing: border-box }
+#publish-overlay, #ap-overlay, #ch-sheet, #md-sheet { padding-left: 0 !important; padding-right: 0 !important }
+</style>${_noScrollbarCss}</head><body>${_uiStateGlobals}${_repostGlobal}${_scrollBridge}${htmlSrc}${_errRelay}${_NB_NOTE_UI_STATE_SCRIPT}</body></html>`;
 }
 
 /* ===================== Bluebook canvas: draft state + render =====================
@@ -49901,7 +49910,7 @@ var el=document.getElementById('nb-onboard-carousel');if(el)el.classList.add('ca
   function openNoteOf(k) {
     var it = getIt(k); if (!it || !it.ns) return;
     var au = it.na === 'me' ? _nbMyAuthorRef() : it.na; // your own note: your own author ref, so the viewer hides Like/Subscribe like it does for your story in the strip
-    if (au) nbOpenStory(it.ns, au, it.noteTitle || '');
+    if (au) nbOpenStoryChecked(it.ns, au, it.noteTitle || '');
     else _nbOpenStoryBySlug(it.ns, { notFound: 'That note isn\u2019t available anymore', failMsg: 'Couldn\u2019t open that note' });
   }
   function addPlSheet(k) {
