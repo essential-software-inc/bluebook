@@ -138,6 +138,19 @@ workflows:
                               }
                           });
                       }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                   }, "NbBars");
               }
           """
@@ -337,6 +350,19 @@ workflows:
                               }
                           });
                       }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                   }, "NbBars");
               }
           """
@@ -521,6 +547,19 @@ workflows:
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
                                       getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
                                   } catch (Exception e) {}
                               }
                           });
@@ -753,6 +792,19 @@ workflows:
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
                                       getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
                                   } catch (Exception e) {}
                               }
                           });
@@ -1011,6 +1063,19 @@ workflows:
                               }
                           });
                       }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                   }, "NbBars");
               }
           """
@@ -1189,6 +1254,19 @@ workflows:
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
                                       getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
                                   } catch (Exception e) {}
                               }
                           });
@@ -1396,6 +1474,19 @@ workflows:
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
                                       getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
                                   } catch (Exception e) {}
                               }
                           });
