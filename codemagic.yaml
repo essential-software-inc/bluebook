@@ -125,6 +125,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -310,6 +324,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -484,6 +512,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -702,6 +744,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -942,6 +998,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -1110,6 +1180,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -1303,6 +1387,20 @@ workflows:
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                      getWindow().setNavigationBarColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
