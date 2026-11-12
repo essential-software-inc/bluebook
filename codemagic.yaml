@@ -149,7 +149,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -334,7 +334,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -562,7 +562,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -780,7 +780,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -966,7 +966,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -1134,7 +1134,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
@@ -1327,7 +1327,7 @@ workflows:
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
-          sed -i.bak -E "s/versionCode [0-9]+/versionCode $PROJECT_BUILD_NUMBER/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + 46))/" android/app/build.gradle
       - name: Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)
         script: |
           sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
