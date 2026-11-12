@@ -120,12 +120,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -167,7 +161,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
@@ -375,12 +386,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -422,7 +427,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
@@ -581,12 +603,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -628,7 +644,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
@@ -869,12 +902,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -916,7 +943,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
@@ -1141,12 +1185,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -1188,7 +1226,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
@@ -1379,12 +1434,6 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
-              public void onCreate(android.os.Bundle savedInstanceState) {
-                  androidx.activity.EdgeToEdge.enable(this);
-                  super.onCreate(savedInstanceState);
-              }
-
-              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -1426,7 +1475,24 @@ workflows:
                   "extends BridgeActivity {' declaration - see file dump above. "
                   "Update this patch step to match."
               )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
