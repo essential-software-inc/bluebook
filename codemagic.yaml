@@ -133,7 +133,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -236,6 +235,38 @@ workflows:
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Enable R8 code shrinking and obfuscation
+        script: |
+          # Play flags "DEX code optimization is below our threshold" when
+          # release builds aren't minified. android/ is regenerated every
+          # build, so this is re-applied here (same reason as the steps above).
+          # The keep rules matter: Capacitor/Cordova find plugins by class name
+          # and the NbBars bridge is called from JS, so those must survive R8.
+          python3 - <<'PY'
+          import re
+          gradle = "android/app/build.gradle"
+          with open(gradle) as f:
+              content = f.read()
+          if "minifyEnabled true" not in content:
+              content, n = re.subn(r"minifyEnabled\s+false", "minifyEnabled true\n            shrinkResources true", content, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
+              with open(gradle, "w") as f:
+                  f.write(content)
+          rules = """
+          -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+          -keepattributes JavascriptInterface
+          -keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+          -keep class com.getcapacitor.** { *; }
+          -keep class org.apache.cordova.** { *; }
+          -keep public class * extends com.getcapacitor.Plugin { *; }
+          -keep class * extends org.apache.cordova.CordovaPlugin { *; }
+          -dontwarn javax.annotation.**
+          """
+          with open("android/app/proguard-rules.pro", "a") as f:
+              f.write(rules)
+          print("R8 shrinking + keep rules enabled")
+          PY
       - name: Build signed Android App Bundle
         script: |
           cd android
@@ -345,7 +376,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -546,7 +576,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -686,6 +715,38 @@ workflows:
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Enable R8 code shrinking and obfuscation
+        script: |
+          # Play flags "DEX code optimization is below our threshold" when
+          # release builds aren't minified. android/ is regenerated every
+          # build, so this is re-applied here (same reason as the steps above).
+          # The keep rules matter: Capacitor/Cordova find plugins by class name
+          # and the NbBars bridge is called from JS, so those must survive R8.
+          python3 - <<'PY'
+          import re
+          gradle = "android/app/build.gradle"
+          with open(gradle) as f:
+              content = f.read()
+          if "minifyEnabled true" not in content:
+              content, n = re.subn(r"minifyEnabled\s+false", "minifyEnabled true\n            shrinkResources true", content, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
+              with open(gradle, "w") as f:
+                  f.write(content)
+          rules = """
+          -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+          -keepattributes JavascriptInterface
+          -keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+          -keep class com.getcapacitor.** { *; }
+          -keep class org.apache.cordova.** { *; }
+          -keep public class * extends com.getcapacitor.Plugin { *; }
+          -keep class * extends org.apache.cordova.CordovaPlugin { *; }
+          -dontwarn javax.annotation.**
+          """
+          with open("android/app/proguard-rules.pro", "a") as f:
+              f.write(rules)
+          print("R8 shrinking + keep rules enabled")
+          PY
       - name: Build signed Android App Bundle
         script: |
           cd android
@@ -791,7 +852,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -1058,7 +1118,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -1144,6 +1203,38 @@ workflows:
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Enable R8 code shrinking and obfuscation
+        script: |
+          # Play flags "DEX code optimization is below our threshold" when
+          # release builds aren't minified. android/ is regenerated every
+          # build, so this is re-applied here (same reason as the steps above).
+          # The keep rules matter: Capacitor/Cordova find plugins by class name
+          # and the NbBars bridge is called from JS, so those must survive R8.
+          python3 - <<'PY'
+          import re
+          gradle = "android/app/build.gradle"
+          with open(gradle) as f:
+              content = f.read()
+          if "minifyEnabled true" not in content:
+              content, n = re.subn(r"minifyEnabled\s+false", "minifyEnabled true\n            shrinkResources true", content, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
+              with open(gradle, "w") as f:
+                  f.write(content)
+          rules = """
+          -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+          -keepattributes JavascriptInterface
+          -keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+          -keep class com.getcapacitor.** { *; }
+          -keep class org.apache.cordova.** { *; }
+          -keep public class * extends com.getcapacitor.Plugin { *; }
+          -keep class * extends org.apache.cordova.CordovaPlugin { *; }
+          -dontwarn javax.annotation.**
+          """
+          with open("android/app/proguard-rules.pro", "a") as f:
+              f.write(rules)
+          print("R8 shrinking + keep rules enabled")
+          PY
       - name: Build signed Android App Bundle
         script: |
           cd android
@@ -1253,7 +1344,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
@@ -1473,7 +1563,6 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
-                                      getWindow().setNavigationBarColor(c);
                                   } catch (Exception e) {}
                               }
                           });
