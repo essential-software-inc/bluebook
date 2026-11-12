@@ -120,6 +120,12 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
+              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -253,6 +259,12 @@ workflows:
                   raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
               with open(gradle, "w") as f:
                   f.write(content)
+          if "proguard-android-optimize.txt" not in content:
+              if "proguard-android.txt" not in content:
+                  raise SystemExit("ERROR: no proguard-android.txt reference in android/app/build.gradle - update this step to match the template.")
+              content = content.replace("proguard-android.txt", "proguard-android-optimize.txt")
+              with open(gradle, "w") as f:
+                  f.write(content)
           rules = """
           -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
           -keepattributes JavascriptInterface
@@ -362,6 +374,12 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
               @Override
               public void onStart() {
                   super.onStart();
@@ -563,6 +581,12 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
+              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -733,6 +757,12 @@ workflows:
                   raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
               with open(gradle, "w") as f:
                   f.write(content)
+          if "proguard-android-optimize.txt" not in content:
+              if "proguard-android.txt" not in content:
+                  raise SystemExit("ERROR: no proguard-android.txt reference in android/app/build.gradle - update this step to match the template.")
+              content = content.replace("proguard-android.txt", "proguard-android-optimize.txt")
+              with open(gradle, "w") as f:
+                  f.write(content)
           rules = """
           -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
           -keepattributes JavascriptInterface
@@ -838,6 +868,12 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
               @Override
               public void onStart() {
                   super.onStart();
@@ -1105,6 +1141,12 @@ workflows:
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
               @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
+              @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
@@ -1221,6 +1263,12 @@ workflows:
                   raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
               with open(gradle, "w") as f:
                   f.write(content)
+          if "proguard-android-optimize.txt" not in content:
+              if "proguard-android.txt" not in content:
+                  raise SystemExit("ERROR: no proguard-android.txt reference in android/app/build.gradle - update this step to match the template.")
+              content = content.replace("proguard-android.txt", "proguard-android-optimize.txt")
+              with open(gradle, "w") as f:
+                  f.write(content)
           rules = """
           -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
           -keepattributes JavascriptInterface
@@ -1330,6 +1378,12 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+
               @Override
               public void onStart() {
                   super.onStart();
