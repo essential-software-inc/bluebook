@@ -3053,7 +3053,7 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
 
 #splash-tagline {
   position: absolute;
-  bottom: calc(-2.2rem + env(safe-area-inset-bottom, 0px));
+  bottom: -2.2rem; /* relative to #splash-inner, so no safe-area inset here (it pushed the tagline up onto the name once the bars became full-bleed) */
   left: 50%;
   transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.55);
