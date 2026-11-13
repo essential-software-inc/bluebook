@@ -30457,8 +30457,9 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
 /* ===================== Settings ===================== */
 (function () {
   const KEY = 'nb_settings_v1';
+  // [2026-11-13 14:27 | pause-bg] changed: Pause moving background is on by default (pauseSweep: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-03 08:38 | floating-nav] [2026-11-04 17:52 | floating-nav] changed: Floating page arrows is on by default (floatPageNav: true). A phone that already saved the setting keeps its own choice.
-  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: false, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false };
+  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false };
   let S = null, lastPoll = 0;
   function load() {
     try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = Object.assign({}, DEF); }
