@@ -956,9 +956,12 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
   max-width: 58px
 }
 #story-viewer-overlay {
+  /* Edge-to-edge (Android 15+): the page frame stops above the system navigation bar, the way the header starts below the status bar, so the page's floating arrows and comments button (drawn inside the frame) clear it. Same env() / Capacitor fallback pair as --sv-top. */
+  --sv-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
   display: none;
   position: fixed;
   inset: 0;
+  padding-bottom: var(--sv-bottom);
   background: #fff;
   z-index: 950;
   flex-direction: column
@@ -1090,7 +1093,7 @@ body.pink #story-viewer-loading { color: #bd2856 }
 
 /* Ad before a note: the skip button sits bottom left, opposite the comments button the note page draws at the right. */
 #story-ad-fab {
-  display: none; position: absolute; left: .9rem; bottom: 1.1rem; z-index: 3;
+  display: none; position: absolute; left: .9rem; bottom: calc(1.1rem + var(--sv-bottom)); z-index: 3;
   width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
   align-items: center; justify-content: center;
   background: rgba(24, 24, 28, .86); color: #fff; font: 600 16px/1 system-ui, -apple-system, sans-serif;
