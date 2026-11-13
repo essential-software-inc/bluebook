@@ -119,13 +119,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -185,7 +186,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -484,13 +489,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -550,7 +556,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -800,13 +810,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -866,7 +877,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1198,13 +1213,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -1264,7 +1280,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1580,13 +1600,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -1646,7 +1667,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1928,13 +1953,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -1994,7 +2020,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -2263,13 +2293,14 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
+              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                  var nbBars = new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -2329,7 +2360,11 @@ workflows:
                               }
                           });
                       }
-                  }, "NbBars");
+                  };
+                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
+                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
+                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
+                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
               }
           """
           if not re.search(pattern, content):
