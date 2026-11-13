@@ -119,14 +119,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -186,11 +185,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -293,6 +288,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
@@ -489,14 +499,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -556,11 +565,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -663,6 +668,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
@@ -810,14 +830,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -877,11 +896,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1028,6 +1043,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Trim bundled pdf.js (source maps, sample PDF)
         script: |
           PDF_DIR="android/app/src/main/assets/public/pdfjs"
@@ -1213,14 +1243,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -1280,11 +1309,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1431,6 +1456,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Trim bundled pdf.js (source maps, sample PDF)
         script: |
           PDF_DIR="android/app/src/main/assets/public/pdfjs"
@@ -1600,14 +1640,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -1667,11 +1706,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -1774,6 +1809,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
@@ -1953,14 +2003,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -2020,11 +2069,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
                   getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public String saveToDownloads(final String path, final String name, final String mime) {
@@ -2127,6 +2172,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
@@ -2293,14 +2353,13 @@ workflows:
           # inside the braces, or extra methods/comments.
           pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
           method = """
-              private boolean nbFullOnce = false;
               @Override
               public void onStart() {
                   super.onStart();
                   getBridge().getWebView().getSettings().setSupportZoom(false);
                   getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
                   getBridge().getWebView().getSettings().setDisplayZoomControls(false);
-                  var nbBars = new Object() {
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
                       @android.webkit.JavascriptInterface
                       public void setBg(final String hex) {
                           runOnUiThread(new Runnable() {
@@ -2360,11 +2419,7 @@ workflows:
                               }
                           });
                       }
-                  };
-                  getBridge().getWebView().addJavascriptInterface(nbBars, "NbBars");
-                  // Start with the WebView already full-bleed, before the page loads, so the splash photo is edge to edge from the first frame
-                  // and nothing resizes under it. The page calls setFull(false) when the splash is gone.
-                  if (!nbFullOnce) { nbFullOnce = true; nbBars.setFull(true); }
+                  }, "NbBars");
               }
           """
           if not re.search(pattern, content):
@@ -2386,6 +2441,21 @@ workflows:
       - name: Sync Capacitor (copies www/ + plugins into android/)
         script: |
           npx cap sync android
+      - name: Start full-bleed (SystemBars viewport-fit hint)
+        script: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
       - name: Set Android app version
         script: |
           sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
