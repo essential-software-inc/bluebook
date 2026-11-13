@@ -3103,6 +3103,27 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   background: #3366cc;
   border-radius: 2px;
   transition: width .25s cubic-bezier(.4, 0, .2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* [2026-11-13 12:37 | splash-bar] silver glow: a soft silver band that keeps pushing forward across the filled part of the bar, on top of the white glow ahead of it */
+#splash-bar-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 70%;
+  background: linear-gradient(90deg, rgba(210, 216, 228, 0) 0%, rgba(240, 243, 249, .95) 50%, rgba(210, 216, 228, 0) 100%);
+  transform: translateX(-100%);
+  animation: sp-bar-silver 1.1s cubic-bezier(.45, 0, .25, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes sp-bar-silver {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(150%); }
 }
 
 #splash-bar-glow {
@@ -18755,6 +18776,55 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-13 12:37 | topics: splash-bar | AI: Claude (app) | Silver glow over the splash bar
+       Start state
+         note-builder-freemium-146.html. The splash bar had a blue fill and a white glow sweeping ahead of the fill's edge.
+       Work done
+         #splash-bar-fill now carries a soft silver band (::after, keyframes sp-bar-silver, 1.1 s, repeating) that pushes forward across the filled part, clipped to the fill. The white glow ahead of it is unchanged. [2026-11-13 12:37 | splash-bar]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Nothing.
+       Important details
+         The silver band is clipped to the fill (overflow hidden), so it grows with the bar and never shows outside it.
+       Removed
+         Nothing.
+       Untested
+         Checked in a headless browser only. Open it cold on the phone and look at the bar in Light, Night and Pink.
+       Depends on
+         Nothing. Worker, Privacy and Terms untouched.
+       Final state
+         The bar shows the white glow at its edge and a silver glow pushing across its fill.
+     ===================================================================== */
+
+  /* =====================================================================
+     SESSION 2026-11-13 12:35 | topics: splash-bar | AI: Claude (app) | Splash bar follows the logo's turn
+       Start state
+         note-builder-freemium-145.html. The splash bar filled on a random timer (8% to 92% in about 3 s) and jumped to 100% at 3.2 s, while the 3D mark needs about 3.5 s for its half turn, so the bar finished before the logo did.
+       Work done
+         The 3D mark now returns progress() (0 to 1 of the half turn). The splash bar sets 8% + 84% x progress every 50 ms, and goes to 100% once the turn is done and the 3.2 s floor has passed. [2026-11-13 12:35 | splash-bar]
+         With no 3D (reduced motion, no WebGL) the bar follows the clock over the same time. The quick-resume path is unchanged (92%, no wait).
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         The 3D mark starts at the end of the file, so on a slow load the bar waits at 8% until the mark appears.
+       Important details
+         Rejected: stretching the timer to 3.5 s, because the bar would drift out of step with the logo if ROT_SPEED changes.
+       Removed
+         The random 8% to 92% timer loop.
+       Untested
+         Checked in a headless browser only. Open it cold on the phone and watch the bar reach the end as the logo finishes its half turn.
+       Depends on
+         Nothing. Worker, Privacy and Terms untouched.
+       Final state
+         The bar and the logo's turn finish together.
+     ===================================================================== */
+
+  /* =====================================================================
      SESSION 2026-11-13 12:20 | topics: splash-slideshow | AI: Claude (app) | Next launch starts on the photo the last one slid to
        Start state
          note-builder-freemium-144.html. The head script moved nb_splash_i on by one at every launch, and the slideshow then slid to the one after that, so the next launch skipped the photo it had slid to.
@@ -33820,17 +33890,24 @@ async function hideSplash() {
   const minSplashPromise = new Promise(resolve => setTimeout(resolve, isResume ? 0 : 3200));
   const bootWorkPromise = (async () => {
     if (isResume) { _setSplashBarPct(92); return; }
-    // Placeholder for real boot work (notes/category load); currently
-    // near-instant, so this mostly yields to let the bar animate smoothly.
-    let pct = 8;
-    while (pct < 92) {
-      await new Promise(r => setTimeout(r, 140));
-      pct = Math.min(92, pct + Math.random() * 14);
-      _setSplashBarPct(pct);
-    }
+    // [2026-11-13 12:35 | splash-bar] changed: the bar follows the 3D mark's turn (8% to 92% over the half rotation) instead of a random timer, so it no longer finishes before the logo does
+    // 3D not started yet: bar waits at 8%. No 3D (reduced motion, no WebGL): it follows the clock over the same half-rotation time. The hold releasing (half turn done, or its 8 s cap) also counts as done, except with no 3D, where the hold is released at once.
+    let held = false;
+    try { window._nbSplashHold.then(() => { held = true; }); } catch (e) { held = true; }
+    const barT0 = performance.now();
+    await new Promise(res => {
+      const iv = setInterval(() => {
+        const ctl = window._nbSplashCtl;
+        let f = 0;
+        if (ctl && ctl.progress) f = ctl.progress();
+        else if (ctl === null) f = Math.min(1, (performance.now() - barT0) / 3500);
+        if (held && ctl !== null) f = 1;
+        _setSplashBarPct(8 + 84 * f);
+        if (f >= 1) { clearInterval(iv); res(); }
+      }, 50);
+    });
   })();
-  await Promise.race([bootWorkPromise, minSplashPromise]);
-  await minSplashPromise;
+  await Promise.all([bootWorkPromise, minSplashPromise]);
   _setSplashBarPct(100);
   setTimeout(hideSplash, isResume ? 0 : 200);
 })();
@@ -49015,7 +49092,9 @@ window.nbStart3DMark = function (bgCanvas, iconCanvas, iconSvg) {
     iconCanvas.addEventListener('webglcontextlost', onGlLost);
     raf = requestAnimationFrame(loop);
 
-    return { stop: stopSplash3D, halfSpin: halfSpin };
+    // [2026-11-13 12:35 | splash-bar] progress(): how far the mark has turned toward its half rotation, 0 to 1; the splash bar follows it
+    function progress() { return Math.min(1, (performance.now() - startT) * ROT_SPEED / Math.PI); }
+    return { stop: stopSplash3D, halfSpin: halfSpin, progress: progress };
   } catch (e) {
     // Any failure here (old WebView, blocked CDN, etc.) just means the
     // flat SVG/CSS mark that already rendered stays as-is.
