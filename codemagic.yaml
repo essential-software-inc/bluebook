@@ -248,40 +248,6 @@ workflows:
               f.write(content)
           print("Disabled pinch-zoom in", path)
           PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
-          PY
       - name: Generate app icon from assets/logo.png
         script: |
           npx capacitor-assets generate --android
@@ -628,40 +594,6 @@ workflows:
               f.write(content)
           print("Disabled pinch-zoom in", path)
           PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
-          PY
       - name: Generate app icon from assets/logo.png
         script: |
           npx capacitor-assets generate --android
@@ -958,40 +890,6 @@ workflows:
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
-          PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
           PY
       - name: Add microphone permission (voice notes)
         script: |
@@ -1372,40 +1270,6 @@ workflows:
               f.write(content)
           print("Disabled pinch-zoom in", path)
           PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
-          PY
       - name: Add microphone permission (voice notes)
         script: |
           # android/ is regenerated every build, so the manifest edit is re-applied here.
@@ -1769,40 +1633,6 @@ workflows:
               f.write(content)
           print("Disabled pinch-zoom in", path)
           PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
-          PY
       - name: Generate app icon from assets/logo.png
         script: |
           npx capacitor-assets generate --android
@@ -2131,40 +1961,6 @@ workflows:
           with open(path, "w") as f:
               f.write(content)
           print("Disabled pinch-zoom in", path)
-          PY
-      - name: Transparent system bars from the first frame
-        script: |
-          # Makes the status/nav bars transparent in the launch + app themes so
-          # the launch frames already match the full-bleed look (no visible
-          # switch mid-load). Patched into the generated styles.xml each build.
-          STYLES=android/app/src/main/res/values/styles.xml
-          python3 - "$STYLES" <<'PY'
-          import re, sys
-          path = sys.argv[1]
-          with open(path) as f:
-              content = f.read()
-          wanted = [
-              ("android:statusBarColor", "@android:color/transparent"),
-              ("android:navigationBarColor", "@android:color/transparent"),
-              ("android:windowLayoutInDisplayCutoutMode", "shortEdges"),
-          ]
-          touched = 0
-          for style in ("AppTheme.NoActionBar", "AppTheme.NoActionBarLaunch"):
-              m = re.search(r'(<style\s+name="' + re.escape(style) + r'"[^>]*>)(.*?)(</style>)', content, re.S)
-              if not m:
-                  continue
-              body = m.group(2)
-              for k, v in wanted[:2]:  # a template-defined colour for these bars is made transparent too
-                  body = re.sub(r'(<item\s+name="%s">)[^<]*(</item>)' % re.escape(k), lambda mm: mm.group(1) + v + mm.group(2), body)
-              add = "".join('\n        <item name="%s">%s</item>' % (k, v) for k, v in wanted if 'name="%s"' % k not in body)
-              content = content[:m.start()] + m.group(1) + body + add + "\n    " + m.group(3) + content[m.end():]
-              touched += 1
-          if not touched:
-              print(content)
-              raise SystemExit("ERROR: no AppTheme.NoActionBar / NoActionBarLaunch style in styles.xml - see dump above. Update this step to match.")
-          with open(path, "w") as f:
-              f.write(content)
-          print("Transparent bars set in", touched, "theme(s)")
           PY
       - name: Generate app icon from assets/logo.png
         script: |
