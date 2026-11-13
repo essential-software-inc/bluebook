@@ -533,6 +533,11 @@ body.pink .rdlg-more-toggle svg {
   color: #875068
 }
 
+/* [2026-11-13 19:25 | account-divider-pink] changed: the line above Show more in the Account sheet is now the sheet's own divider colour in Pink (#f0d9e4 was almost the same as the pale pink sheet, so it did not show). */
+body.pink #account-body .rdlg-more-toggle {
+  border-top-color: var(--sh-div)
+}
+
 .rdlg-title {
   font-size: .95rem;
   font-weight: bold;
@@ -18785,6 +18790,30 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-13 19:25 | topics: account-divider-pink | AI: Claude (app) | Show more line in the Account sheet shows in Pink
+       Start state
+         webapp.html. In Pink, the thin line above Show more in the Account sheet (#logout-more-toggle) was not visible. Its colour was #f0d9e4, almost the same as the pale pink sheet (--sh-bg rgba(255,248,251,.72)).
+       Work done
+         One rule added after the Pink .rdlg-more-toggle rules: body.pink #account-body .rdlg-more-toggle { border-top-color: var(--sh-div) }. --sh-div is the divider colour every Pink sheet already uses (rgba(200,54,94,.16)). [2026-11-13 19:25 | account-divider-pink]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The missing line above Show more in Pink.
+       Found
+         Checked every other divider in the Pink sheets and screens: they use --sh-div, --st-line, --ch-bd, --ch-div, --md-div or #f5c5d8, all visible. This was the only one with a faint hard-coded colour. Recent pages (#ap-sheet) has no Night or Pink rules on purpose (page-list, 11-03), so it was left alone. Light and Night use their own rules and were not touched.
+       Important details
+         The rule sits next to the Pink toggle rules and uses #account-body so it only reaches the Account sheet, where --sh-div exists. The old #f0d9e4 rule stays as the fallback.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Open the Account sheet in Pink and check the line above Show more, then tap it and check Light and Night look the same as before.
+       Depends on
+         Nothing. Worker, Privacy and Terms untouched.
+       Final state
+         Account sheet: Pink shows the line above Show more like the other Pink sheets.
+     ===================================================================== */
+
+  /* =====================================================================
      SESSION 2026-11-13 12:37 | topics: splash-bar | AI: Claude (app) | Silver glow over the splash bar
        Start state
          note-builder-freemium-146.html. The splash bar had a blue fill and a white glow sweeping ahead of the fill's edge.
@@ -19140,6 +19169,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
+        account-divider-pink the line above Show more in the Account sheet is visible in Pink (this app)
         homepage-tile      the Homepage tile in Settings > About & Support that opens the Worker's welcome page (this app)
         author-page-like   the heart in each row of the Recent pages sheet (author's pages): likes and unlikes the page like the viewer header heart, red when liked, author alert, counts and the Liked tab follow (this app)
         nav-brand-icon     the Brand icon picker is left out in the text-only brand designs (Broadsheet, Magazine, Boutique), where only an image shows (this app)
