@@ -196,7 +196,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
@@ -492,7 +492,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
@@ -739,7 +739,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
@@ -1068,7 +1068,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
@@ -1381,7 +1381,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
@@ -1660,7 +1660,7 @@ workflows:
           had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
           content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
           if had_oncreate:
-              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              content, n = re.subn(r"([ \t]*)(super\.onCreate\(\s*\w+\s*\);)", r"\1androidx.activity.EdgeToEdge.enable(this);\n\1\2", content, count=1)
               if n != 1:
                   print(content)
                   raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
