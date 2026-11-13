@@ -151,6 +151,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
@@ -417,6 +447,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
@@ -634,6 +694,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
@@ -933,6 +1023,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
@@ -1216,6 +1336,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
@@ -1465,6 +1615,36 @@ workflows:
                           });
                       }
                   }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
               }
           """
           if not re.search(pattern, content):
