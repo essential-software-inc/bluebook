@@ -33815,6 +33815,12 @@ async function _nbExportViaCapacitor(backupJson, fileName, cap) {
     // a shared folder, just get bytes onto disk so Share can hand it
     // off to whatever app the user picks (Drive, Files, WhatsApp...).
     const result = await cap.Filesystem.writeFile({ path: fileName, data: base64, directory: 'CACHE' });
+    // Android app: copy the cache file into Downloads/Bluebook via MediaStore (NbFiles bridge in MainActivity) - no storage permission needed. Falls through to Share if unavailable.
+    if (window.NbFiles && window.NbFiles.saveToDownloads) {
+      const r = String(window.NbFiles.saveToDownloads(result.uri, fileName, /\.html$/.test(fileName) ? 'text/html' : 'application/json'));
+      if (r === 'OK') { showToast('Saved to Downloads/Bluebook'); return; }
+      _nbLog('native save to downloads', r);
+    }
     if (cap.Share) {
       await cap.Share.share({ title: 'Bluebook Backup', url: result.uri });
       showToast('Backup shared');
