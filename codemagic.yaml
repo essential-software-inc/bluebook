@@ -137,6 +137,41 @@ workflows:
                               }
                           });
                       }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                       @android.webkit.JavascriptInterface
                       public void setIcons(final boolean darkIcons) {
                           runOnUiThread(new Runnable() {
@@ -467,6 +502,41 @@ workflows:
                               }
                           });
                       }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                       @android.webkit.JavascriptInterface
                       public void setIcons(final boolean darkIcons) {
                           runOnUiThread(new Runnable() {
@@ -744,6 +814,41 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
                                   } catch (Exception e) {}
                               }
                           });
@@ -1111,6 +1216,41 @@ workflows:
                               }
                           });
                       }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                       @android.webkit.JavascriptInterface
                       public void setIcons(final boolean darkIcons) {
                           runOnUiThread(new Runnable() {
@@ -1458,6 +1598,41 @@ workflows:
                               }
                           });
                       }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                       @android.webkit.JavascriptInterface
                       public void setIcons(final boolean darkIcons) {
                           runOnUiThread(new Runnable() {
@@ -1771,6 +1946,41 @@ workflows:
                               }
                           });
                       }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
                       @android.webkit.JavascriptInterface
                       public void setIcons(final boolean darkIcons) {
                           runOnUiThread(new Runnable() {
@@ -2067,6 +2277,41 @@ workflows:
                                   try {
                                       int c = android.graphics.Color.parseColor(hex);
                                       getWindow().getDecorView().setBackgroundColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
                                   } catch (Exception e) {}
                               }
                           });
