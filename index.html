@@ -966,17 +966,19 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
 #story-viewer-overlay.open { display: flex }
 #story-viewer-overlay.over-media { z-index: 9100 }
 #story-viewer-header {
+  /* Edge-to-edge (Android 15+): same status-bar clearance as #site-header. env() needs viewport-fit=cover; --safe-area-inset-top is Capacitor's injected fallback. */
+  --sv-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
   position: relative;
   display: flex;
   align-items: center;
-  padding: .8rem 0;
+  padding: calc(.8rem + var(--sv-top)) 0 .8rem;
   border-bottom: 1px solid #eef1f6;
   flex-shrink: 0
 }
 #story-viewer-back {
   position: absolute;
   left: 0;
-  top: 50%;
+  top: calc(50% + var(--sv-top) / 2);
   transform: translateY(-50%);
   z-index: 1;
   background: none;
@@ -1000,7 +1002,7 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
   margin: 0 calc(6.4px + .3rem) 0 2rem /* right = the Subscribe icon's inset from the screen edge (its right + padding), so the text ends that far from the edge */
 }
 /* [verified-names] the tick sits just after the chevron's tap area and stays put like the chevron; the title box starts after it, so a long name scrolls under the tick's edge instead of carrying it along */
-#story-viewer-tick { position: absolute; left: 34px; top: 50%; transform: translateY(-50%); z-index: 1; width: 16px; height: 16px; display: none; pointer-events: none }
+#story-viewer-tick { position: absolute; left: 34px; top: calc(50% + var(--sv-top) / 2); transform: translateY(-50%); z-index: 1; width: 16px; height: 16px; display: none; pointer-events: none }
 /* [2026-11-02 23:15 | verified-dialog] the header tick can be tapped (it opens the "About the tick" dialog). Extra tap room sits above, below and to the right only, so the Back button's area is untouched. */
 #story-viewer-header.has-tick #story-viewer-tick { pointer-events: auto; cursor: pointer; box-sizing: content-box; padding: 8px 8px 8px 0; -webkit-tap-highlight-color: transparent }
 #story-viewer-header.has-tick #story-viewer-tick { display: block }
@@ -1010,7 +1012,7 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
 #story-viewer-sub-btn {
   position: absolute;
   right: 6.4px;
-  top: 50%;
+  top: calc(50% + var(--sv-top) / 2);
   transform: translateY(-50%);
   z-index: 1;
   background: none;
@@ -1027,7 +1029,7 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
 #story-viewer-restore-btn {
   position: absolute;
   right: 6.4px;
-  top: 50%;
+  top: calc(50% + var(--sv-top) / 2);
   transform: translateY(-50%);
   z-index: 1;
   display: none;
@@ -1048,7 +1050,7 @@ body.sv-version-on #delete-overlay { z-index: 1000 } /* the confirm dialog has t
 #story-viewer-like-btn {
   position: absolute;
   right: 40px;
-  top: 50%;
+  top: calc(50% + var(--sv-top) / 2);
   transform: translateY(-50%);
   z-index: 1;
   background: none;
@@ -2952,7 +2954,8 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   background-repeat: no-repeat;
 }
 
-#sp-slide-cur { background-image: var(--splash-img, var(--splash-img-0)); }
+/* The outgoing photo is pinned by --splash-cur (set once by the slideshow script). It must not follow --splash-img: that variable is re-pointed at the slide's end and when the decoded copy of a photo is swapped in, and either swap while this slide is on screen shows as a flicker or a pop. */
+#sp-slide-cur { background-image: var(--splash-cur, var(--splash-img, var(--splash-img-0))); }
 #sp-slide-next { background-image: var(--splash-next); }
 
 #splash-stage {
@@ -5483,7 +5486,7 @@ try{var st=JSON.parse(localStorage.getItem('nb_settings_v1')||'{}');rm=st.reduce
 // [2026-11-13 12:15 | splash-slideshow] changed: the quick-resume skip is removed, so the slide plays on every launch that shows the photo
 if(!s||!window.__nbSplashPhoto||rm){try{localStorage.setItem('nb_splash_i',String(((parseInt(root.getAttribute('data-splash'),10)||0)+1)%3))}catch(e){}return}
 var i=parseInt(root.getAttribute('data-splash'),10)||0,n=(i+1)%3,SLIDE_AT=1600,SLIDE_MS=900,fin=false,t0=Date.now();
-root.style.setProperty('--splash-next','var(--splash-img-'+n+')');
+root.style.setProperty('--splash-next','var(--splash-img-'+n+')');root.style.setProperty('--splash-cur','var(--splash-img-'+i+')');
 s.classList.add('slides');
 window._nbSplashSlideDone=new Promise(function(res){
 function commit(){
@@ -5491,12 +5494,15 @@ if(fin)return;fin=true;
 root.setAttribute('data-splash',String(n));
 try{localStorage.setItem('nb_splash_i',String(n))}catch(e){}
 root.style.removeProperty('--splash-img');
-try{if(window._nbSplashBgUse)window._nbSplashBgUse(n)}catch(e){}
+// Deferred: re-encoding the photo (base64 to blob) is synchronous work, so it runs after the slide's last frame is on screen, not in it.
+setTimeout(function(){try{if(window._nbSplashBgUse)window._nbSplashBgUse(n)}catch(e){}},80);
 res();}
 function go(){
-var tr=document.getElementById('splash-slides'),fb=setTimeout(commit,SLIDE_MS+400);
-if(tr)tr.addEventListener('transitionend',function(){clearTimeout(fb);commit()},{once:true});
-s.classList.add('slid');}
+var tr=document.getElementById('splash-slides'),fb=0,arm=function(){if(!fin&&!fb)fb=setTimeout(commit,SLIDE_MS+500)};
+if(tr)tr.addEventListener('transitionend',function(){clearTimeout(fb);fb=-1;commit()},{once:true});
+s.classList.add('slid');
+// The fallback timer starts only after two frames have been drawn: while the page is still parsing, the slide can start late, and a timer started now would commit (swap photos) before it had moved.
+try{requestAnimationFrame(function(){requestAnimationFrame(arm)})}catch(e){arm()}}
 // Decode the incoming photo first so it doesn't pop in mid-slide.
 var pre=new Image(),d=Promise.resolve();
 try{pre.src=getComputedStyle(root).getPropertyValue('--splash-img-'+n).replace(/^\s*url\(\s*["']?|["']?\s*\)\s*$/g,'');if(pre.decode)d=pre.decode()}catch(e){}
@@ -34147,10 +34153,26 @@ function nbVisibleNotes() {
   const acct = nbAccount();
   return nbLoadNotes().filter(n => !n.acct || (acct && n.acct === acct.sub));
 }
-function nbExportNotes() {
+// Backup Notes button: shows the same spinner + disabled state as the other busy buttons (_pubSetBtnLoading) until the file is
+// saved, shared or the share sheet is dismissed. The actual work is _nbExportNotesRun, which returns a promise for that moment.
+async function nbExportNotes() {
+  const btn = document.getElementById('btn-download-backup');
+  if (btn && _pubBtnBusy(btn)) return;
+  if (btn) _pubSetBtnLoading(btn, true, 'Backing up\u2026');
+  try {
+    await new Promise(r => setTimeout(r, 60)); // let the spinner paint before the (synchronous) JSON work starts
+    await _nbExportNotesRun();
+  } catch (e) {
+    _nbLog('backup export', e);
+    showToast('Backup failed' + _nbFailureReason(e));
+  } finally {
+    if (btn) _pubSetBtnLoading(btn, false);
+  }
+}
+function _nbExportNotesRun() {
   const notes = nbLoadNotes();
   const playlists = _nbPlaylistsForSync().list;
-  if (!notes.length && !playlists.length) { showToast('No notes saved yet'); return; }
+  if (!notes.length && !playlists.length) { showToast('No notes saved yet'); return Promise.resolve(); }
   // Note content only carries <img data-note-img-ref="id"> placeholders —
   // the actual base64 image data lives separately under nb_img_<id> in
   // localStorage. Pull every referenced id's data along so a restore on
@@ -34180,8 +34202,7 @@ function nbExportNotes() {
   // falls through to the existing browser behavior when tested in Chrome.
   const cap = window.Capacitor && window.Capacitor.Plugins;
   if (cap && cap.Filesystem) {
-    _nbExportViaCapacitor(backupJson, fileName, cap);
-    return;
+    return _nbExportViaCapacitor(backupJson, fileName, cap);
   }
   const blob = new Blob([backupJson], { type: 'application/json' });
   // Prefer the native share sheet (lets the user pick where the backup
@@ -34189,8 +34210,7 @@ function nbExportNotes() {
   // forced-download link when the Web Share API or file sharing isn't
   // available on this device/browser.
   if (!navigator.share) {
-    _nbDownloadBackupBlob(blob, fileName, 'no navigator.share');
-    return;
+    return _nbDownloadBackupBlob(blob, fileName, 'no navigator.share');
   }
   // Web Share is spec'd to require a secure context (HTTPS). Opened via
   // file:// (or plain http:// on a LAN IP), canShare() can still report
@@ -34199,8 +34219,7 @@ function nbExportNotes() {
   // Catch that here so the toast says the real reason instead of just
   // "rejected".
   if (!window.isSecureContext) {
-    _nbDownloadBackupBlob(blob, fileName, 'not a secure context (protocol: ' + location.protocol + ') — needs https to use native share');
-    return;
+    return _nbDownloadBackupBlob(blob, fileName, 'not a secure context (protocol: ' + location.protocol + ') — needs https to use native share');
   }
   const file = new File([blob], fileName, { type: 'application/json' });
   let canShareFiles = false;
@@ -34208,17 +34227,16 @@ function nbExportNotes() {
   try { canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] })); }
   catch (e) { canShareErr = e; }
   if (!canShareFiles) {
-    _nbDownloadBackupBlob(blob, fileName, canShareErr ? ('canShare threw: ' + canShareErr.message) : 'canShare({files}) returned false');
-    return;
+    return _nbDownloadBackupBlob(blob, fileName, canShareErr ? ('canShare threw: ' + canShareErr.message) : 'canShare({files}) returned false');
   }
-  navigator.share({ files: [file], title: 'Bluebook Backup' })
+  return navigator.share({ files: [file], title: 'Bluebook Backup' })
     .then(() => showToast('Backup shared'))
     .catch(err => {
       // AbortError just means the user dismissed the share sheet —
       // not a failure, so don't fall back to a forced download in
       // that case (it would feel like the cancel didn't work).
       if (err && err.name === 'AbortError') return;
-      _nbDownloadBackupBlob(blob, fileName, 'share() rejected: ' + (err && err.message));
+      return _nbDownloadBackupBlob(blob, fileName, 'share() rejected: ' + (err && err.message));
     });
 }
 async function _nbExportViaCapacitor(backupJson, fileName, cap) {
@@ -34259,6 +34277,7 @@ function _nbUtf8ToBase64(str) {
   return btoa(binary);
 }
 function _nbDownloadBackupBlob(blob, fileName, reason) {
+  let _done; const _p = new Promise(r => { _done = r; }); // settles when the download has been triggered (the Backup button's spinner waits for it)
   if (reason) _nbLog('backup share fallback: ' + reason);
   // blob: object URLs are just an in-renderer reference — plain Chrome
   // resolves them fine, but most Android WebView download handlers only
@@ -34272,7 +34291,7 @@ function _nbDownloadBackupBlob(blob, fileName, reason) {
     a.href = reader.result; // data: URI, e.g. data:application/json;base64,....
     a.download = fileName;
     document.body.appendChild(a); a.click(); a.remove();
-    showToast('Backup downloaded');
+    showToast('Backup downloaded'); _done();
   };
   reader.onerror = function () {
     // Last-resort fallback if even FileReader fails for some reason —
@@ -34282,9 +34301,10 @@ function _nbDownloadBackupBlob(blob, fileName, reason) {
     a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    showToast('Backup downloaded');
+    showToast('Backup downloaded'); _done();
   };
   reader.readAsDataURL(blob);
+  return _p;
 }
 /* ===================== Export a single note as a standalone website ======
    Turns one saved note into a self-contained .html file the person can
