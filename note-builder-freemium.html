@@ -2893,7 +2893,7 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   background-position: center !important;
   background-repeat: no-repeat !important;
   width: 100vw;
-  height: 100dvh;
+  height: var(--splash-h, 100dvh); /* pinned to full-screen height so content doesn't jump when nav bar hides */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5287,6 +5287,25 @@ document.body.dataset.lockScrollY = window.scrollY;
     style.textContent = splashRule;
     document.head.appendChild(style);
   } catch (e) {}
+})();
+</script>
+
+<script>
+// Pin splash height to the full-screen height from first paint so the centered
+// layout doesn't jump when the system nav bar hides (viewport grows). Only grows, never shrinks.
+(function(){
+  var h = 0;
+  function pin(){
+    // Native app only, and only when the gap is nav-bar sized. In embedded previews / browsers the
+    // viewport is much shorter than the screen, and pinning there pushes content off-view.
+    if (!window.Capacitor) return;
+    var ih = window.innerHeight || 0, sh = (window.screen && screen.height) || 0;
+    if (sh - ih > 100) return;
+    var n = Math.max(ih, sh);
+    if (n > h) { h = n; document.documentElement.style.setProperty('--splash-h', h + 'px'); }
+  }
+  pin();
+  window.addEventListener('resize', pin);
 })();
 </script>
 
