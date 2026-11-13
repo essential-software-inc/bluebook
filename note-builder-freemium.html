@@ -2909,15 +2909,6 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   display: block;
 }
 
-/* Splash content is visible from first paint; nothing waits on fonts or the 3D mark. */
-#splash #sp-fill { clip-path: none; animation: none; }
-#splash #sp-ghost { opacity: 0; }
-#splash #splash-name,
-#splash #splash-bar-wrap,
-#splash #splash-tagline,
-#splash #splash-copyright,
-#splash #splash-consideration { opacity: 1; animation: none; }
-
 #splash-stage {
   position: absolute;
   top: 0;
@@ -5427,6 +5418,8 @@ body.pink .nb-carousel-dot{background:#d796b0}
 </div>
 <script>
 (function(){
+// hideSplash() waits on this until the 3D mark has turned half a rotation. Released by the 3D init at the end of the file; the timeout only covers that init never running.
+window._nbSplashHold=new Promise(function(r){window._nbSplashRelease=r;setTimeout(r,8000)});
 function full(v){try{if(window.NbBars&&NbBars.setFull)NbBars.setFull(v)}catch(e){}}
 window._nbSplashFull=full;full(true);
 window.addEventListener('load',function(){if(document.getElementById('splash'))full(true)});
@@ -33613,6 +33606,8 @@ let _nbImgCacheInitPromise = null;
 async function hideSplash() {
   const s = document.getElementById('splash');
   if (!s) return;
+  // Never dismiss before the 3D mark has turned half a rotation (a fast boot or the resume fast-path would otherwise cut it short).
+  try { await window._nbSplashHold; } catch (e) {}
   // The Notes grid was already built back at boot (see the top-level
   // buildCatBar()/nbRenderNotesScreen() calls, and the nbGoScreen('notes')
   // landing right after), but that happened immediately at script parse
@@ -33630,6 +33625,7 @@ async function hideSplash() {
   }
   buildCatBar();
   nbRenderNotesScreen();
+  try { if (window._nbSplashCtl) window._nbSplashCtl.stop(); } catch (e) {} // tear the 3D down the instant the fade-out starts
   s.classList.add('out');
   // Gate on first launch, before the scroll lock the splash held is
   // released: unlockScroll() below only actually unlocks when no
@@ -48924,20 +48920,10 @@ window.nbStart3DMark = function (bgCanvas, iconCanvas, iconSvg) {
     document.getElementById('splash-icon-3d'),
     document.getElementById('splash-icon-svg')
   );
-  if (!splashCtl) return;
-  if (typeof window.hideSplash === 'function') {
-    var _origHideSplash = window.hideSplash;
-    // Holds the actual teardown (fade-out + DOM removal) until the mark
-    // has turned at least half a rotation — otherwise a fast boot (or
-    // the resume fast-path's near-0ms floor) can call hideSplash while
-    // the spin has barely started, so the logo flashes by unrotated.
-    window.hideSplash = function () {
-      return Promise.resolve(splashCtl.halfSpin).then(function () {
-        splashCtl.stop();
-        return _origHideSplash();
-      });
-    };
-  }
+  window._nbSplashCtl = splashCtl;
+  var release = window._nbSplashRelease || function () {};
+  // No 3D (reduced motion, no WebGL, failed init): nothing to wait for. Otherwise hideSplash() is released once the half rotation is done.
+  if (!splashCtl) release(); else Promise.resolve(splashCtl.halfSpin).then(release);
 })();
 
 </script>
