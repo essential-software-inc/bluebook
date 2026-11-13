@@ -2909,21 +2909,7 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   display: block;
 }
 
-/* Everything on the splash appears together: one fade of the whole stage once Inter is ready (so text never reflows
-   from the fallback font). Nothing is individually animated, delayed, scaled or clipped. The 3D logo/particles start behind it; it is revealed only once Inter and the 3D mark are both up, so the flat->3D swap is never seen. Failsafe at 5s. */
-#splash-stage {
-  opacity: 0;
-  transition: opacity .35s ease;
-  animation: sp-fade .01s linear 5s forwards;
-}
-
-#splash.ready #splash-stage {
-  opacity: 1;
-}
-
-#splash #splash-bg-3d { transition: opacity .35s ease; }
-#splash:not(.ready) #splash-bg-3d.on { opacity: 0; }
-
+/* Splash content is visible from first paint; nothing waits on fonts or the 3D mark. */
 #splash #sp-fill { clip-path: none; animation: none; }
 #splash #sp-ghost { opacity: 0; }
 #splash #splash-name,
@@ -5440,14 +5426,11 @@ body.pink .nb-carousel-dot{background:#d796b0}
 
 </div>
 <script>
-(function(){var s=document.getElementById('splash');if(!s)return;var need={font:0,gl:0};
-function chk(){if(need.font&&need.gl)s.classList.add('ready')}
-window._nbSplashGate=function(k){need[k]=1;chk()};
-setTimeout(function(){s.classList.add('ready')},5000); // failsafe only
+(function(){
 function full(v){try{if(window.NbBars&&NbBars.setFull)NbBars.setFull(v)}catch(e){}}
 window._nbSplashFull=full;full(true);
 window.addEventListener('load',function(){if(document.getElementById('splash'))full(true)});
-try{if(document.fonts&&document.fonts.load){Promise.race([document.fonts.load('800 32px "Inter Variable"'),new Promise(function(r){setTimeout(r,800)})]).then(function(){window._nbSplashGate('font')},function(){window._nbSplashGate('font')})}else window._nbSplashGate('font')}catch(e){window._nbSplashGate('font')}})();
+})();
 </script>
 
 <div id="account-screen">
@@ -48941,7 +48924,6 @@ window.nbStart3DMark = function (bgCanvas, iconCanvas, iconSvg) {
     document.getElementById('splash-icon-3d'),
     document.getElementById('splash-icon-svg')
   );
-  try { if (window._nbSplashGate) window._nbSplashGate('gl'); } catch (e) {} // 3D is up (or unavailable): the splash may now be revealed, all at once
   if (!splashCtl) return;
   if (typeof window.hideSplash === 'function') {
     var _origHideSplash = window.hideSplash;
