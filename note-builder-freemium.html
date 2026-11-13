@@ -2901,6 +2901,26 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   transition: opacity .4s ease;
 }
 
+/* Splash background is ALWAYS the live viewport (inset:0, no height/dvh/100vw), so no strip of body background can show under it.
+   Content sits in #splash-stage, which carries the pinned full-screen height, so it still can't jump when the viewport grows. */
+#splash {
+  width: auto;
+  height: auto;
+  display: block;
+}
+
+#splash-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--splash-h, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
 #splash.out {
   opacity: 0;
   pointer-events: none;
@@ -5298,10 +5318,10 @@ document.body.dataset.lockScrollY = window.scrollY;
   function pin(){
     // Native app only, and only when the gap is nav-bar sized. In embedded previews / browsers the
     // viewport is much shorter than the screen, and pinning there pushes content off-view.
-    if (!window.Capacitor) return;
-    var ih = window.innerHeight || 0, sh = (window.screen && screen.height) || 0;
-    if (sh - ih > 100) return;
-    var n = Math.max(ih, sh);
+    var ih = window.innerHeight || 0, ch = document.documentElement.clientHeight || 0;
+    var sh = (window.Capacitor && window.screen && screen.height) || 0;
+    if (sh - ih > 100) sh = 0;
+    var n = Math.max(ih, ch, sh);
     if (n > h) { h = n; document.documentElement.style.setProperty('--splash-h', h + 'px'); }
   }
   pin();
@@ -5364,6 +5384,7 @@ body.pink .nb-carousel-dot{background:#d796b0}
 <script>try{if(JSON.parse(localStorage.getItem('nb_settings_v1')||'{}').glassMode!==false)document.currentScript.previousElementSibling.media='all'}catch(e){}</script>
 <div id="splash">
   <canvas id="splash-bg-3d" aria-hidden="true"></canvas>
+  <div id="splash-stage">
   <div id="splash-inner">
     <div id="splash-icon-wrap">
     <svg id="splash-icon-svg" width="120" height="120" viewBox="0 0 90 105" fill="none" aria-hidden="true">
@@ -5389,6 +5410,7 @@ body.pink .nb-carousel-dot{background:#d796b0}
 
   <div id="splash-consideration">For your thoughts and considerations</div>
   <div id="splash-copyright">&copy; Essential Software</div>
+  </div>
 
 </div>
 
