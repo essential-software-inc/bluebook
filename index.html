@@ -6391,6 +6391,8 @@ body.pink{--nb-g1:rgba(255,110,150,.95);--nb-g2:rgba(255,200,140,.9);--nb-g3:rgb
 .wash-sweep-in.wash-frozen .wash-spot{transition:none!important}
 /* Each moving layer gets its own GPU layer, so the drift is composited (transform/opacity only) instead of re-rasterising the big gradients every frame - that repaint made the top of the screen shake and could flash the nav. */
 .wash-sweep-in,.wash-sweep-in::before,.wash-sweep-in::after,.wash-spot{will-change:transform,opacity}
+/* The splash and sign-in screens fully cover the app, so the wash behind them is invisible: drop its GPU layers while they're up so the splash photo and 3D logo keep their memory. */
+body:has(#splash, #account-screen.open) #nb-wash,body:has(#splash, #account-screen.open) #nb-wash-sweep,body:has(#splash, #account-screen.open) #nb-wash-fade{display:none!important}
 .wash-sweep-in::after{content:'';position:absolute;inset:0;background-image:radial-gradient(ellipse 34% 56% at var(--ax1,62% 52%),var(--gx,transparent) 0%,transparent 70%),radial-gradient(ellipse 26% 46% at var(--ax2,20% 30%),var(--gx2,var(--gx,transparent)) 0%,transparent 70%);opacity:var(--ga,0);transform:var(--t3,none);transition:opacity var(--gd,5s) ease-in-out,transform var(--d3,16s) ease-in-out}
 /* The wrapper clips the oversized, drifting layers at 74% of the screen: exactly where the fade into the page colour ends. Anything drawn lower would sit below the fade and show as a hard-edged tint at the bottom. */
 #nb-wash-sweep{position:fixed;left:0;right:0;top:0;height:74%;overflow:hidden;z-index:-1;pointer-events:none;--sw:var(--nb-wash)}
@@ -30460,6 +30462,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       };
       document.addEventListener('visibilitychange', refresh);
       window.addEventListener('pageshow', refresh);
+      window._nbSplashBgRefresh = refresh; // also called when the sign-in screen / backup sheet opens
     }
   }
   // 2) onboarding carousel images
@@ -33142,6 +33145,7 @@ function _nbStopAcctSplash3D() {
   if (_acctSplash3DCtl) { _acctSplash3DCtl.stop(); _acctSplash3DCtl = null; }
 }
 function openAccountScreen(focusInvite) {
+  try { if (window._nbSplashBgRefresh) window._nbSplashBgRefresh(); } catch (e) {} // re-decode the background before it shows
   nbRenderAccountDialog();
   document.getElementById('account-screen').classList.add('open');
   lockScroll();
@@ -46788,6 +46792,7 @@ if (_pendingRestoreMsg) {
 }
 /* ===================== Backup sheet ===================== */
 function openBackupSheet() {
+  try { if (window._nbSplashBgRefresh) window._nbSplashBgRefresh(); } catch (e) {} // re-decode the background before it shows
   document.getElementById('backup-overlay').classList.add('open');
   lockScroll();
 }
@@ -48603,6 +48608,14 @@ window.nbStart3DMark = function (bgCanvas, iconCanvas, iconSvg) {
 
     initBg();
     initIcon();
+    // If the GPU drops either WebGL context (memory pressure, app switch), the canvases go blank and the flat logo stays hidden: fall back to the flat mark.
+    function onGlLost(e) {
+      try { e.preventDefault(); } catch (err) {}
+      stopSplash3D();
+      try { iconCanvas.classList.remove('on'); bgCanvas.classList.remove('on'); iconSvg.classList.remove('hidden-3d'); } catch (err) {}
+    }
+    bgCanvas.addEventListener('webglcontextlost', onGlLost);
+    iconCanvas.addEventListener('webglcontextlost', onGlLost);
     raf = requestAnimationFrame(loop);
 
     return { stop: stopSplash3D, halfSpin: halfSpin };
