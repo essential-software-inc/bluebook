@@ -5,6 +5,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script>
+// [2026-11-13 12:20 | splash-slideshow] changed: a launch starts on the photo the last launch slid to (nb_splash_i is written by the slideshow script below the #splash markup, or advanced there when no slide plays)
+// Splash photo: each launch starts on the photo the last launch ended on
+// (random start on first launch). The images live in the --splash-img-N vars.
+// First thing in <head>: data-splash has to be set before the boot background paint below, or that paint shows image 0 first and then switches.
+(function () {
+  var n = 3, i = Math.floor(Math.random() * n);
+  try {
+    var prev = parseInt(localStorage.getItem('nb_splash_i'), 10);
+    if (prev >= 0 && prev < n) i = prev;
+    else localStorage.setItem('nb_splash_i', String(i));
+  } catch (e) {}
+  document.documentElement.setAttribute('data-splash', String(i));
+})();
+</script>
 <title>Bluebook</title>
 <style>
 @font-face{
@@ -2901,6 +2916,57 @@ html[data-splash="2"] { --splash-img: var(--splash-img-2) }
   transition: opacity .4s ease;
 }
 
+/* Splash background is ALWAYS the live viewport (inset:0, no height/dvh/100vw), so no strip of body background can show under it.
+   Content sits in #splash-stage, which carries the pinned full-screen height, so it still can't jump when the viewport grows. */
+#splash {
+  width: auto;
+  height: auto;
+  display: block;
+  overflow: hidden;
+}
+
+/* Splash slideshow: two photos side by side; the track slides left once, mid-load (script after the #splash markup).
+   Only switched on (.slides) when the splash shows a photo, so the flat Night/Pink classic splash is untouched.
+   The dim (::after), 3D particles, logo and text stay put while the photo slides underneath. */
+#splash-slides { display: none; }
+
+#splash.slides #splash-slides {
+  display: flex;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  transition: transform .9s cubic-bezier(.65, 0, .35, 1);
+  will-change: transform;
+}
+
+#splash.slides.slid #splash-slides {
+  transform: translateX(-50%);
+}
+
+.sp-slide {
+  flex: 0 0 50%;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+#sp-slide-cur { background-image: var(--splash-img, var(--splash-img-0)); }
+#sp-slide-next { background-image: var(--splash-next); }
+
+#splash-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--splash-h, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
 #splash.out {
   opacity: 0;
   pointer-events: none;
@@ -5283,6 +5349,10 @@ document.body.dataset.lockScrollY = window.scrollY;
     try { nbGlassOn = JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').glassMode !== false; } catch (e) {}
     if ((m === 'dark' || m === 'pink') && !nbGlassOn) {
       splashRule += ' #splash { background: ' + splashColor + ' !important; }';
+    } else {
+      window.__nbSplashPhoto = true; // the splash shows its photo (not the flat classic colour): the slideshow may run
+      // Same photo + dim as #splash, painted on the root, so nothing but the splash can ever show under or around it. Removed with this style in hideSplash().
+      splashRule += ' html { background-image: linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; }';
     }
     style.textContent = splashRule;
     document.head.appendChild(style);
@@ -5298,28 +5368,14 @@ document.body.dataset.lockScrollY = window.scrollY;
   function pin(){
     // Native app only, and only when the gap is nav-bar sized. In embedded previews / browsers the
     // viewport is much shorter than the screen, and pinning there pushes content off-view.
-    if (!window.Capacitor) return;
-    var ih = window.innerHeight || 0, sh = (window.screen && screen.height) || 0;
-    if (sh - ih > 100) return;
-    var n = Math.max(ih, sh);
+    var ih = window.innerHeight || 0, ch = document.documentElement.clientHeight || 0;
+    var sh = (window.Capacitor && window.screen && screen.height) || 0;
+    if (sh - ih > 100) sh = 0;
+    var n = Math.max(ih, ch, sh);
     if (n > h) { h = n; document.documentElement.style.setProperty('--splash-h', h + 'px'); }
   }
   pin();
   window.addEventListener('resize', pin);
-})();
-</script>
-
-<script>
-// Splash photo rotation: each launch shows the next of the 3 splash images
-// (random start on first launch). The images live in the --splash-img-N vars.
-(function () {
-  var n = 3, i = Math.floor(Math.random() * n);
-  try {
-    var prev = parseInt(localStorage.getItem('nb_splash_i'), 10);
-    if (prev >= 0 && prev < n) i = (prev + 1) % n;
-    localStorage.setItem('nb_splash_i', String(i));
-  } catch (e) {}
-  document.documentElement.setAttribute('data-splash', String(i));
 })();
 </script>
 
@@ -5363,7 +5419,9 @@ body.pink .nb-carousel-dot{background:#d796b0}
 </style>
 <script>try{if(JSON.parse(localStorage.getItem('nb_settings_v1')||'{}').glassMode!==false)document.currentScript.previousElementSibling.media='all'}catch(e){}</script>
 <div id="splash">
+  <div id="splash-slides" aria-hidden="true"><div class="sp-slide" id="sp-slide-cur"></div><div class="sp-slide" id="sp-slide-next"></div></div>
   <canvas id="splash-bg-3d" aria-hidden="true"></canvas>
+  <div id="splash-stage">
   <div id="splash-inner">
     <div id="splash-icon-wrap">
     <svg id="splash-icon-svg" width="120" height="120" viewBox="0 0 90 105" fill="none" aria-hidden="true">
@@ -5389,8 +5447,46 @@ body.pink .nb-carousel-dot{background:#d796b0}
 
   <div id="splash-consideration">For your thoughts and considerations</div>
   <div id="splash-copyright">&copy; Essential Software</div>
+  </div>
 
 </div>
+<script>
+(function(){
+// hideSplash() waits on this until the 3D mark has turned half a rotation. Released by the 3D init at the end of the file; the timeout only covers that init never running.
+window._nbSplashHold=new Promise(function(r){window._nbSplashRelease=r;setTimeout(r,8000)});
+// Splash slideshow: mid-load the photo slides to the next one, so the app starts on the next image. Skipped when the splash is the flat classic colour and under reduced motion. hideSplash() waits on _nbSplashSlideDone.
+window._nbSplashSlideDone=Promise.resolve();
+(function(){
+var s=document.getElementById('splash'),root=document.documentElement,rm=false;
+try{var st=JSON.parse(localStorage.getItem('nb_settings_v1')||'{}');rm=st.reduceMotion!=null?!!st.reduceMotion:!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)}catch(e){}
+// [2026-11-13 12:15 | splash-slideshow] changed: the quick-resume skip is removed, so the slide plays on every launch that shows the photo
+if(!s||!window.__nbSplashPhoto||rm){try{localStorage.setItem('nb_splash_i',String(((parseInt(root.getAttribute('data-splash'),10)||0)+1)%3))}catch(e){}return}
+var i=parseInt(root.getAttribute('data-splash'),10)||0,n=(i+1)%3,SLIDE_AT=1600,SLIDE_MS=900,fin=false,t0=Date.now();
+root.style.setProperty('--splash-next','var(--splash-img-'+n+')');
+s.classList.add('slides');
+window._nbSplashSlideDone=new Promise(function(res){
+function commit(){
+if(fin)return;fin=true;
+root.setAttribute('data-splash',String(n));
+try{localStorage.setItem('nb_splash_i',String(n))}catch(e){}
+root.style.removeProperty('--splash-img');
+try{if(window._nbSplashBgUse)window._nbSplashBgUse(n)}catch(e){}
+res();}
+function go(){
+var tr=document.getElementById('splash-slides'),fb=setTimeout(commit,SLIDE_MS+400);
+if(tr)tr.addEventListener('transitionend',function(){clearTimeout(fb);commit()},{once:true});
+s.classList.add('slid');}
+// Decode the incoming photo first so it doesn't pop in mid-slide.
+var pre=new Image(),d=Promise.resolve();
+try{pre.src=getComputedStyle(root).getPropertyValue('--splash-img-'+n).replace(/^\s*url\(\s*["']?|["']?\s*\)\s*$/g,'');if(pre.decode)d=pre.decode()}catch(e){}
+Promise.race([d.catch(function(){}),new Promise(function(r){setTimeout(r,1200)})]).then(function(){setTimeout(go,Math.max(0,SLIDE_AT-(Date.now()-t0)))});
+setTimeout(commit,9000);});
+})();
+function full(v){try{if(window.NbBars&&NbBars.setFull)NbBars.setFull(v)}catch(e){}}
+window._nbSplashFull=full;full(true);
+window.addEventListener('load',function(){if(document.getElementById('splash'))full(true)});
+})();
+</script>
 
 <div id="account-screen">
   <button id="account-screen-back-btn" onclick="closeAccountScreen()" aria-label="Back" title="Back">
@@ -18659,6 +18755,55 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      ===================================================================== */
 
   /* =====================================================================
+     SESSION 2026-11-13 12:20 | topics: splash-slideshow | AI: Claude (app) | Next launch starts on the photo the last one slid to
+       Start state
+         note-builder-freemium-144.html. The head script moved nb_splash_i on by one at every launch, and the slideshow then slid to the one after that, so the next launch skipped the photo it had slid to.
+       Work done
+         Head script: a launch now starts on the stored photo as it is. [2026-11-13 12:20 | splash-slideshow]
+         Slideshow script: the slide already stores the photo it ends on. When no slide plays (flat splash or Reduce motion), it stores the next photo instead, so the photo still changes every launch. [2026-11-13 12:20 | splash-slideshow]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         If the app is closed before the slide ends (about 2.8 s), the stored photo stays as it was and the next launch repeats it.
+       Important details
+         Rejected: advancing the photo in the head script and sliding to the one after, because the next launch then starts one photo past the one it slid to.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Cold-open twice: the second launch should open on the photo the first one slid to.
+       Depends on
+         Nothing. Worker, Privacy and Terms untouched.
+       Final state
+         Each launch starts where the last slide ended and slides to the next.
+     ===================================================================== */
+
+  /* =====================================================================
+     SESSION 2026-11-13 12:15 | topics: splash-slideshow | AI: Claude (app) | Splash slideshow plays on every launch
+       Start state
+         note-builder-freemium-143.html already held the splash slideshow (slide track, early script, hideSplash wait, blob keep-alive). It was skipped whenever the app was backgrounded in the last 30 minutes (window.__nbIsLikelyResume), so a quick reopen showed no slide.
+       Work done
+         Removed window.__nbIsLikelyResume from the guard of the slideshow script, so it runs on every launch that shows the photo. [2026-11-13 12:15 | splash-slideshow]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         The slideshow still skips under Reduce motion (Settings, or the phone's animations turned off) and when Glass mode is off in Night or Pink.
+       Important details
+         The slide is not skipped on a quick resume any more because the person wants to see it every time. Rejected: a Settings switch, not asked for.
+       Removed
+         The quick-resume condition in the slideshow guard.
+       Untested
+         Not run in the app. Open it cold and again right after backgrounding it, with Reduce motion off and Glass mode on, and watch the photo slide to the next one at about 1.6 s.
+       Depends on
+         Nothing. Worker, Privacy and Terms untouched.
+       Final state
+         The photo slides once per launch in every case except Reduce motion and the flat classic splash.
+     ===================================================================== */
+
+  /* =====================================================================
      SESSION 2026-11-08 00:50 | topics: support-address | AI: Claude (app) | Contact address moved to support@my-site.name
        Start state
          Uploads: index-68.js and webapp-4.html. The contact address in the Privacy Policy, Consumer Terms, the Delete Your Account page, the verified-name sentence and the locked-name message was essentialsoftware.support@gmail.com. Email Routing now forwards support@my-site.name to that Gmail.
@@ -30616,30 +30761,33 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       return URL.createObjectURL(new Blob([u8], { type: m[1] }));
     } catch (e) { return null; }
   }
-  // 1) splash / sheet background
-  const idx = parseInt(root.getAttribute('data-splash'), 10) || 0;
-  const raw = getComputedStyle(root).getPropertyValue('--splash-img-' + idx);
-  const um = /url\(\s*["']?(data:[^"')]+)["']?\s*\)/.exec(raw || '');
-  if (um) {
+  // 1) splash / sheet background. Follows data-splash; the splash slideshow re-points it to the next photo with window._nbSplashBgUse(idx).
+  let bgImg = null, bgApply = () => {};
+  function useSplashBg(idx) {
+    const raw = getComputedStyle(root).getPropertyValue('--splash-img-' + idx);
+    const um = /url\(\s*["']?(data:[^"')]+)["']?\s*\)/.exec(raw || '');
+    if (!um) return;
     const burl = dataToBlobUrl(um[1]);
-    if (burl) {
-      const img = new Image();
-      keep.push(img);
-      const apply = () => root.style.setProperty('--splash-img', 'url("' + burl + '")');
-      img.onerror = () => root.style.removeProperty('--splash-img'); // fall back to data-splash CSS rule
-      img.src = burl;
-      (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(apply);
-      // re-decode + re-assert on resume from background
-      const refresh = () => {
-        if (document.hidden) return;
-        const r = img.decode ? img.decode() : Promise.resolve();
-        r.catch(() => {}).then(apply);
-      };
-      document.addEventListener('visibilitychange', refresh);
-      window.addEventListener('pageshow', refresh);
-      window._nbSplashBgRefresh = refresh; // also called when the sign-in screen / backup sheet opens
-    }
+    if (!burl) return;
+    const img = new Image();
+    keep.push(img);
+    bgImg = img;
+    bgApply = () => { if (bgImg === img) root.style.setProperty('--splash-img', 'url("' + burl + '")'); };
+    img.onerror = () => { if (bgImg === img) root.style.removeProperty('--splash-img'); }; // fall back to data-splash CSS rule
+    img.src = burl;
+    (img.decode ? img.decode() : Promise.resolve()).catch(() => {}).then(bgApply);
   }
+  // re-decode + re-assert on resume from background
+  const refresh = () => {
+    if (document.hidden || !bgImg) return;
+    const r = bgImg.decode ? bgImg.decode() : Promise.resolve();
+    r.catch(() => {}).then(bgApply);
+  };
+  document.addEventListener('visibilitychange', refresh);
+  window.addEventListener('pageshow', refresh);
+  window._nbSplashBgRefresh = refresh; // also called when the sign-in screen / backup sheet opens
+  window._nbSplashBgUse = useSplashBg;
+  useSplashBg(parseInt(root.getAttribute('data-splash'), 10) || 0);
   // 2) onboarding carousel images
   document.querySelectorAll('#nb-onboard-track img[src^="data:"]').forEach(function (el) {
     const orig = el.getAttribute('src');
@@ -33572,6 +33720,8 @@ let _nbImgCacheInitPromise = null;
 async function hideSplash() {
   const s = document.getElementById('splash');
   if (!s) return;
+  // Never dismiss before the 3D mark has turned half a rotation (a fast boot or the resume fast-path would otherwise cut it short).
+  try { await window._nbSplashHold; await window._nbSplashSlideDone; } catch (e) {}
   // The Notes grid was already built back at boot (see the top-level
   // buildCatBar()/nbRenderNotesScreen() calls, and the nbGoScreen('notes')
   // landing right after), but that happened immediately at script parse
@@ -33589,6 +33739,7 @@ async function hideSplash() {
   }
   buildCatBar();
   nbRenderNotesScreen();
+  try { if (window._nbSplashCtl) window._nbSplashCtl.stop(); } catch (e) {} // tear the 3D down the instant the fade-out starts
   s.classList.add('out');
   // Gate on first launch, before the scroll lock the splash held is
   // released: unlockScroll() below only actually unlocks when no
@@ -33617,7 +33768,7 @@ async function hideSplash() {
   const flashStyle = document.querySelector('style[data-flash]');
   if (flashStyle) flashStyle.remove();
   document.documentElement.style.backgroundColor = '';
-  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); }, 420);
+  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {} }, 420);
   // Every fresh launch lands on the sign-in screen (signed in or not) until Back is
   // tapped; a quick resume from the background keeps whatever screen they were on.
   // Opened last so the scroll lock it takes isn't undone by unlockScroll() above.
@@ -48883,20 +49034,10 @@ window.nbStart3DMark = function (bgCanvas, iconCanvas, iconSvg) {
     document.getElementById('splash-icon-3d'),
     document.getElementById('splash-icon-svg')
   );
-  if (!splashCtl) return;
-  if (typeof window.hideSplash === 'function') {
-    var _origHideSplash = window.hideSplash;
-    // Holds the actual teardown (fade-out + DOM removal) until the mark
-    // has turned at least half a rotation — otherwise a fast boot (or
-    // the resume fast-path's near-0ms floor) can call hideSplash while
-    // the spin has barely started, so the logo flashes by unrotated.
-    window.hideSplash = function () {
-      return Promise.resolve(splashCtl.halfSpin).then(function () {
-        splashCtl.stop();
-        return _origHideSplash();
-      });
-    };
-  }
+  window._nbSplashCtl = splashCtl;
+  var release = window._nbSplashRelease || function () {};
+  // No 3D (reduced motion, no WebGL, failed init): nothing to wait for. Otherwise hideSplash() is released once the half rotation is done.
+  if (!splashCtl) release(); else Promise.resolve(splashCtl.halfSpin).then(release);
 })();
 
 </script>
