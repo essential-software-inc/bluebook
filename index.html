@@ -24267,10 +24267,11 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
   function stCuRun(n, o, fin, ms) {
     var t0 = null;
     n.setAttribute('data-cu-fin', fin);
+    n.__cuRun = true; // this number has a running count: the scan below settles a data-cu-fin that has none (a copy, an undo step)
     n.textContent = stCuFmt(o, 0);
-    function done() { if (n.hasAttribute('data-cu-fin')) { n.textContent = fin; n.removeAttribute('data-cu-fin'); } }
+    function done() { n.__cuRun = false; if (n.hasAttribute('data-cu-fin')) { n.textContent = fin; n.removeAttribute('data-cu-fin'); } }
     function step(ts) {
-      if (!n.hasAttribute('data-cu-fin')) return; // settled by a save or a layout change
+      if (!n.hasAttribute('data-cu-fin')) { n.__cuRun = false; return; } // settled by a save or a layout change
       var ae = document.activeElement;
       if (!n.isConnected || (ae && (ae === n || n.contains(ae) || (ae.isContentEditable && ae.contains(n))))) { done(); return; } // never fight someone typing
       if (t0 === null) t0 = ts;
@@ -24283,7 +24284,11 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var ae = document.activeElement, vh = window.innerHeight || document.documentElement.clientHeight;
     Array.prototype.forEach.call(document.querySelectorAll('.blk-cu-n'), function(n) {
-      if (n.hasAttribute('data-cu-fin')) return;
+      if (n.hasAttribute('data-cu-fin')) {
+        if (n.__cuRun) return;
+        // Rebuilt from HTML caught mid-count (duplicate, paste, undo / redo): no count owns it, so put its real number back and carry on
+        n.textContent = n.getAttribute('data-cu-fin'); n.removeAttribute('data-cu-fin');
+      }
       var t = n.textContent, r = n.getBoundingClientRect(), c = stCuCfg(n);
       var vis = r.height > 0 && (Math.min(r.bottom, vh) - Math.max(r.top, 0)) >= r.height * 0.4;
       if (!vis) { n.__cuVis = false; return; } // out of view: with Plays set to Every time it plays again next time it scrolls in
