@@ -30754,7 +30754,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
     privacy: { body: 'privacy-body', ov: 'privacy-overlay', p: 'privacy-find' },
     terms: { body: 'cterms-body', ov: 'cterms-overlay', p: 'cterms-find' },
     about: { body: 'about-body', ov: 'about-overlay', p: 'about-find' },
-    write: { body: 'einfo-body', ov: 'einfo-overlay', p: 'einfo-find' } // the Write guide and, in Share mode, the Share guide: openEditorInfo swaps the text on every open, so nothing needs re-marking
+    write: { body: 'einfo-body', ov: 'einfo-overlay', p: 'einfo-find' } // the Write guide (the Share guide hides this box in openEditorInfo): openEditorInfo swaps the text on every open, so nothing needs re-marking
   };
   const SPECIAL = '\\^$.*+?()[]{}|/';
   const st = {};
@@ -31052,6 +31052,7 @@ function openEditorInfo() {
   if (_einfoEditorHtml === null) { _einfoEditorHtml = bodyEl.innerHTML; _einfoEditorTitle = titleEl.textContent; }
   bodyEl.innerHTML = _nbRepostMode ? EINFO_REPOST_HTML : _einfoEditorHtml;
   titleEl.textContent = _nbRepostMode ? 'Share' : _einfoEditorTitle;
+  document.getElementById('einfo-find').style.display = _nbRepostMode ? 'none' : ''; // [2026-11-15 | share-guide] the Share guide is too short for Find in page, so its find box is hidden; the Write guide keeps it
   document.getElementById('einfo-overlay').classList.add('open');
   bodyEl.scrollTop = 0;
   lockScroll();
@@ -41412,13 +41413,17 @@ function _pubCancelledUnpublishToast(st) {
     : 'Cancelled. Couldn\u2019t check whether the page came down.');
 }
 // [2026-11-01 13:45 | verified-hold] A verified name stays yours for 30 days after unpublishing: when /meta says the page is on one, add that line to the confirm box.
+let _nbHoldSeq = 0;
+// [2026-11-15 | verified-hold] changed: the box used to open at once and add the verified-name line a moment later, so the usual text flashed first. This now asks /meta first and returns a promise that settles when the answer is in (or after 1.2 s, or at once if the request fails, e.g. offline), so the caller opens the box with its final words. A late answer still adds the line.
 function _nbHoldNote(ov, bodyEl, confirmBtn, note) {
-  const slug = note.publishedSlug, base = bodyEl.textContent;
-  if (!slug) return;
-  fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug), nbIsSignedIn() ? { cache: 'no-store', headers: { 'Authorization': 'Bearer ' + nbSessionToken() } } : { cache: 'no-store' }) // signed in: a page switched off in Teams still answers its author in full
+  const slug = note.publishedSlug, base = bodyEl.textContent, seq = ++_nbHoldSeq;
+  if (!slug) return Promise.resolve();
+  let waiting = true;
+  const ask = fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug), nbIsSignedIn() ? { cache: 'no-store', headers: { 'Authorization': 'Bearer ' + nbSessionToken() } } : { cache: 'no-store' }) // signed in: a page switched off in Teams still answers its author in full
     .then(r => r.ok ? r.json() : null)
-    .then(d => { if (d && d.verified && ov.classList.contains('open') && note.publishedSlug === slug && !confirmBtn.disabled && bodyEl.textContent === base) bodyEl.textContent = base + ' This is your verified name, so it stays yours for 30 days. We\u2019ll send you alerts before it\u2019s freed up for anyone to use.'; })
+    .then(d => { if (d && d.verified && (waiting || ov.classList.contains('open')) && seq === _nbHoldSeq && note.publishedSlug === slug && !confirmBtn.disabled && bodyEl.textContent === base) bodyEl.textContent = base + ' This is your verified name, so it stays yours for 30 days. We\u2019ll send you alerts before it\u2019s freed up for anyone to use.'; })
     .catch(() => {});
+  return Promise.race([ask, new Promise(r => setTimeout(r, 1200))]).then(() => { waiting = false; });
 }
 function nbUnpublishNote() {
   const note = _pubFindNote(_pubNoteId);
@@ -41481,8 +41486,7 @@ function nbUnpublishNote() {
   const _upBody = ov.querySelector('.rdlg-body');
   if (!_upBody.dataset.base) _upBody.dataset.base = _upBody.textContent;
   _upBody.textContent = _upBody.dataset.base;
-  _nbHoldNote(ov, _upBody, confirmBtn, note);
-  ov.classList.add('open');
+  _nbHoldNote(ov, _upBody, confirmBtn, note).then(() => { ov.classList.add('open'); }); // [2026-11-15 | verified-hold] open once the verified-name check is in
 }
 function _pubCopyUrl() {
   const url = document.getElementById('pub-live-url').textContent;
@@ -44295,8 +44299,7 @@ function _nbShowUnpublishThenDeleteDialog(id, note) {
     nbRenderNotesScreen();
     _nbShowDeleteConfirmDialog.raw(id); // still holding the dialog's turn: the same box turns into the delete question
   };
-  _nbHoldNote(ov, bodyEl, confirmBtn, note);
-  ov.classList.add('open');
+  return _nbHoldNote(ov, bodyEl, confirmBtn, note).then(() => { ov.classList.add('open'); }); // [2026-11-15 | verified-hold] open once the verified-name check is in; _nbQueueDialog waits for this promise
 }
 // The dialogs above that fill the shared confirm box themselves take their turn behind any confirm already on screen (as _nbAskConfirm does)
 // and keep the queue until the box closes, so two can never overwrite each other's title, text and buttons.
@@ -44306,10 +44309,14 @@ function _nbQueueDialog(fn) {
       const ov = document.getElementById('delete-overlay');
       let obs = null;
       const fin = () => { if (obs) obs.disconnect(); res(); };
-      try { fn.apply(null, a); } catch (e) { _nbLog('queued dialog', e); fin(); return; }
-      if (!ov || !ov.classList.contains('open')) { fin(); return; } // it never opened (e.g. deleting without asking)
-      obs = new MutationObserver(() => { if (!ov.classList.contains('open')) fin(); });
-      obs.observe(ov, { attributes: true, attributeFilter: ['class'] });
+      let r; try { r = fn.apply(null, a); } catch (e) { _nbLog('queued dialog', e); fin(); return; }
+      const watch = () => {
+        if (!ov || !ov.classList.contains('open')) { fin(); return; } // it never opened (e.g. deleting without asking)
+        obs = new MutationObserver(() => { if (!ov.classList.contains('open')) fin(); });
+        obs.observe(ov, { attributes: true, attributeFilter: ['class'] });
+      };
+      if (r && typeof r.then === 'function') r.then(watch, e => { _nbLog('queued dialog', e); fin(); }); // [2026-11-15 | verified-hold] a dialog may open a moment later, once it has its final words
+      else watch();
     }));
     _nbAskChain = run.catch(() => {});
   };
