@@ -913,6 +913,8 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
   cursor: pointer;
   padding: 0
 }
+/* [2026-11-19 07:17 | story-avatar-shadow] changed: the app-wide tap ripple (_nbButtonFx) is clipped to the button's square box, so on a story avatar it showed as a round shadow with flat edges over the circle. No ripple here; the press squash stays. */
+.nb-story-item .nb-ripple-clip { display: none }
 .nb-story-ring {
   width: 54px;
   height: 54px;
@@ -1011,8 +1013,8 @@ body.pink .alert-md-task.on { background: #bd2856; border-color: #bd2856 }
 }
 /* [verified-names] the tick sits just after the chevron's tap area and stays put like the chevron; the title box starts after it, so a long name scrolls under the tick's edge instead of carrying it along */
 #story-viewer-tick { position: absolute; left: 34px; top: calc(50% + var(--sv-top) / 2); transform: translateY(-50%); z-index: 1; width: 16px; height: 16px; display: none; pointer-events: none }
-/* [2026-11-02 23:15 | verified-dialog] the header tick can be tapped (it opens the "About the tick" dialog). Extra tap room sits above, below and to the right only, so the Back button's area is untouched. */
-#story-viewer-header.has-tick #story-viewer-tick { pointer-events: auto; cursor: pointer; box-sizing: content-box; padding: 8px 8px 8px 0; -webkit-tap-highlight-color: transparent }
+/* [2026-11-02 23:15 | verified-dialog] the header tick can be tapped (it opens the "About the tick" dialog). [2026-11-19 06:54 | tick-explicit-tap] changed: the extra tap room around the tick is gone, so the dialog opens only when the tick icon itself is tapped. */
+#story-viewer-header.has-tick #story-viewer-tick { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #story-viewer-header.has-tick #story-viewer-tick { display: block }
 #story-viewer-header.has-tick #story-viewer-title { margin-left: 56px }
 #story-viewer-tick circle { fill: var(--al-acc, #3366cc) }
@@ -1127,6 +1129,9 @@ body.pink #story-viewer-loading { color: #bd2856 }
 .gc-verified.gc-vprofile path { stroke: var(--al-acc) }
 /* [2026-11-02 23:15 | verified-dialog] every tick in the app is tappable; the dialog (the shared confirm box) has to sit above the story viewer and the Media screen while it is open */
 .gc-verified, .nb-story-vtick { cursor: pointer; -webkit-tap-highlight-color: transparent }
+/* [2026-11-19 07:46 | tick-explicit-tap] changed: a tick's square box takes no taps, only the round icon drawn inside it does, so a tap in the empty corner next to it (the strip badge sits over the avatar's edge) opens the story or card as usual and never the About the tick box. */
+.gc-verified, .nb-story-vtick, #story-viewer-tick { pointer-events: none }
+.gc-verified circle, .gc-verified path, .nb-story-vtick circle, .nb-story-vtick path, #story-viewer-tick circle, #story-viewer-tick path { pointer-events: all }
 body.nb-tick-dlg #delete-overlay { z-index: 9200 }
 /* [2026-11-02 22:03 | verified-cards] verified profile on the stories strip badge (ring: page-coloured disc, accent edge) and in the story viewer header */
 .nb-story-vtick.vp circle { fill: #fff; stroke: var(--al-acc); stroke-width: 2 }
@@ -19182,6 +19187,9 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
+        bars-match         the browser's bar colour (theme-color) is the page background in every theme, the same as the Android app's status and navigation bars (this app)
+        story-avatar-shadow pressing a story avatar no longer shows the button tap ripple as a round shadow with flat edges over the avatar (this app)
+        tick-explicit-tap  the About the tick box opens only when the tick icon itself is tapped; the header tick lost its extra tap room (this app)
         account-divider-pink the line above Show more in the Account sheet is visible in Pink (this app)
         homepage-tile      the Homepage tile in Settings > About & Support that opens the Worker's welcome page (this app)
         author-page-like   the heart in each row of the Recent pages sheet (author's pages): likes and unlikes the page like the viewer header heart, red when liked, author alert, counts and the Liked tab follow (this app)
@@ -19232,6 +19240,56 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-19 07:54 | topics: bars-match | AI: Claude (app) | Browser bars look the same as the Android app's
+       Start state
+         Report: the browser's edge to edge look is not quite the same as the Android build. The app paints its status and navigation bars with NbBars in --nb-bg (Light #fff, Night #080808, Pink #fff8fb); the browser's <meta theme-color> in applyTheme used Night #111111 and Pink #c8365e.
+       Work done
+         applyTheme: theme-color is now #ffffff, #080808 and #fff8fb, the same colours the app uses for its bars. In a browser the bar and its icons now follow the page the way they do in the app. [2026-11-19 07:54 | bars-match]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Night and Pink bars differed between browser and app.
+       Found
+         The top header and the story viewer header use max(env(safe-area-inset-top), var(--safe-area-inset-top)); the chat, media and other screens use env() alone. Same in a browser (both 0). Not changed.
+         The report did not say what looks different, so this is the one difference found in the code. Not seen on a device.
+       Removed
+         Nothing.
+       Untested
+         Not run. Open the app in Chrome in Night and Pink and compare the status bar and toolbar with the Android app.
+       Depends on
+         This file only.
+       Final state
+         theme-color matches the app's bar colours in every theme.
+       Next
+         If something else looks different (top gap, bottom bar, header height), say where.
+
+     SESSION 2026-11-19 06:54 | topics: story-avatar-shadow, tick-explicit-tap | AI: Claude (app) | Square shadow on a pressed story avatar; About the tick box only from the tick itself
+       Start state
+         Uploaded webapp.html (51727 lines). The stories strip button (.nb-story-item) took the generic button ripple. The story viewer's header tick (#story-viewer-tick) had 8px of extra tap room above, below and to the right.
+       Work done
+         CSS: .nb-story-item .nb-ripple-clip is hidden. The tap ripple that _nbButtonFx adds to every button is a growing circle clipped to the button's own square box; on a round avatar it read as a shadow with flat edges. The press squash is kept. [2026-11-19 07:17 | story-avatar-shadow]
+         CSS: the header tick no longer has padding: 8px 8px 8px 0 (and content-box), so its tap area is the 16px icon only. [2026-11-19 06:54 | tick-explicit-tap]
+         [2026-11-19 07:46 | tick-explicit-tap] Still opened from beside a tick on the phone, because each tick's box is square and the icon round: the strip badge, the card ticks and the header tick now take taps on the round icon only (CSS pointer-events: the box none, circle and check all). The Worker's page tick got the same in index.js (VERIFIED_TICK: span none, circle and check all).
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The two items above.
+       Found
+         No other tick has extra tap room: the card ticks (.gc-verified) and the strip badge (.nb-story-vtick) are the icon's own size. Every call to nbVerifiedInfo comes from a tick's own onclick, except the viewer page tick, which arrives as the nb-verified-tap message from the Worker page.
+         Found from the phone screenshots (a round shadow with flat top and side edges that moved between frames), then in _nbButtonFx. Two earlier guesses (focus ring, pressable picture) were wrong and were removed.
+       Important details
+         Rejected: changing nbVerifiedInfo itself. It already stops the click bubbling, so the only way in was a bigger tap area.
+       Removed
+         The 8px tap padding on the header tick.
+       Untested
+         Not run. On the phone: press and release a story avatar (no shadow over it, in Light, Night and Pink), tap beside the header tick (nothing), tap the tick (box opens), tap a card tick and a strip tick (box opens).
+       Depends on
+         This file and index.js (VERIFIED_TICK only: the tick span and circle tap areas). Deploy index.js. Privacy, Terms, LEGAL_DEFAULTS and TECH_NOTES untouched.
+       Final state
+         A pressed story avatar draws nothing square. The tick box opens only from the tick icon.
+       Next
+         Check on the phone. Other round buttons (avatar, round icons) take the same square-clipped ripple; not changed.
 
      SESSION 2026-11-07 10:33 | topics: content-rule | AI: Claude (app) | Terms: say what is not allowed, so the Play content rating answers are true
        Start state
@@ -30483,7 +30541,8 @@ function applyTheme(mode) {
   if (moon) moon.style.display = mode === 'light' ? '' : 'none';
   if (sun) sun.style.display = mode === 'pink' ? '' : 'none';
   if (blos) blos.style.display = mode === 'dark' ? '' : 'none';
-  const themeColor = mode === 'dark' ? '#111111' : mode === 'pink' ? '#c8365e' : '#ffffff';
+  // [2026-11-19 07:54 | bars-match] changed: the browser's bar colour is the page background, the same colours the Android app paints its status and navigation bars with (--nb-bg: Light #fff, Night #080808, Pink #fff8fb). It was Night #111111 and Pink #c8365e, so the browser showed different bars from the app, and Pink got light icons instead of dark.
+  const themeColor = mode === 'dark' ? '#080808' : mode === 'pink' ? '#fff8fb' : '#ffffff';
   let tc = document.querySelector('meta[name="theme-color"]');
   if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
   tc.content = themeColor;
