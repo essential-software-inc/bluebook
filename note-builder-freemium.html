@@ -20,6 +20,28 @@
   document.documentElement.setAttribute('data-splash', String(i));
 })();
 </script>
+<script>
+// [2026-11-24 15:35 | web-account-bars] Eye care, as early as the page can: the class, the tint element and a small rule for both go in before the big style block below is parsed, so the warm tint (and the tinted page edge under the phone's bottom nav area) is there from the first paint, not after the boot script further down. The full rules and _nbEyeApply later find the same class and element and change nothing.
+(function () {
+  try {
+    if (JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').eyeCare !== true) return;
+    var de = document.documentElement;
+    de.classList.add('nb-eye-care');
+    var st = document.createElement('style');
+    st.textContent = 'html.nb-eye-care{background-image:linear-gradient(rgba(255,150,40,.16),rgba(255,150,40,.16))}html.nb-eye-care>#nb-eye-tint{display:block;position:fixed;left:0;right:0;top:-120px;bottom:-120px;z-index:2147482000;pointer-events:none;background:rgba(255,150,40,.16);transform:translateZ(0);will-change:transform}';
+    document.head.appendChild(st);
+    var el = document.createElement('div'); el.id = 'nb-eye-tint'; el.setAttribute('aria-hidden', 'true'); de.appendChild(el);
+    // [2026-11-24 15:16 | eye-care-app-bars] Android app: the native status and navigation bars take the tinted page colour from this first script too, not only after load (the bridge is injected before page scripts run). Same blend as _nbEyeBlend and same colours as _nbSyncBars.
+    if (window.NbBars) {
+      var tm = localStorage.getItem('nb_theme_v1') || 'light';
+      var bc = tm === 'dark' ? [8, 8, 8] : tm === 'pink' ? [255, 248, 251] : [255, 255, 255], tt = [255, 150, 40], bh = '#';
+      for (var q = 0; q < 3; q++) { bc[q] = Math.round(bc[q] * .84 + tt[q] * .16); bh += ('0' + bc[q].toString(16)).slice(-2); }
+      NbBars.setBg(bh);
+      if (NbBars.setIcons) NbBars.setIcons((bc[0] * 299 + bc[1] * 587 + bc[2] * 114) / 255000 > 0.5);
+    }
+  } catch (e) {}
+})();
+</script>
 <title>Bluebook: A Notepad</title>
 <style>
 @font-face{
@@ -63,10 +85,13 @@ html {
      instead). body is #fff, so the very first pixels painted, before
      #splash's own dark background has been applied, were plain white —
      a flash, regardless of #splash's fixed positioning/z-index, since
-     this happens at the viewport level underneath it. Matching splash's
-     base tone here stops that propagation (html is no longer
-     transparent) so the first paint is already dark, not white. */
-  background: #000000;
+     this happens at the viewport level underneath it. Giving html its own
+     colour here stops that propagation (html is no longer transparent).
+     The boot script paints html in the splash colour (!important) until the
+     splash ends, so the first paint is still not white. This is also the
+     colour the phone's bottom nav area shows behind the app, so it is the
+     page background in every theme, same as glass mode. */
+  background: #ffffff;
   
   overflow-anchor: none;
   /* This is an installed app shell, not a browser tab — a system
@@ -89,11 +114,11 @@ body::-webkit-scrollbar {
    during that one frame html's background shows through. Without these,
    that gap always showed the base navy above regardless of theme. */
 html.night {
-  background: #111111
+  background: #080808
 }
 
 html.pink {
-  background: #c8365e
+  background: #fff8fb
 }
 
 body {
@@ -717,6 +742,11 @@ body.pink #_wptoast .toast-ok {
 }
 
 body.nb-reduce-motion .nb-ripple-clip { display: none }
+
+/* [2026-11-24 13:45 | eye-care] Eye care: a warm, slightly dimmed tint over the whole screen (all themes) to cut harsh light. It takes no taps and sits under the boot lock only. */
+/* [2026-11-24 14:31 | eye-care-edge] changed: the tint is a real element (#nb-eye-tint) directly under <html>, not body::after. It sits outside body (so body-level hides/repaint nudges and scroll-time layer changes can't drop it over the app's bottom nav), has its own compositor layer, and is pushed 120px past every screen edge so it also covers the browser's edge-to-edge system-bar area. The browser bar colour (theme-color) and the Android app's native bars (NbBars.setBg) are blended with the same tint in JS. */
+#nb-eye-tint { display: none }
+html.nb-eye-care > #nb-eye-tint { display: block; position: fixed; left: 0; right: 0; top: -120px; bottom: -120px; z-index: 2147482000; pointer-events: none; background: rgba(255, 150, 40, .16); transform: translateZ(0); will-change: transform }
 
 /* Switches: springy thumb, stretches while pressed (like a physical toggle), track colour fades */
 .nb-switch-track { transition: background-color .26s ease, box-shadow .2s ease !important }
@@ -3894,6 +3924,30 @@ body.pink #splash, body.pink #account-screen {
   background: #c8365e;
 }
 
+/* [2026-11-24 14:12 | web-splash-flat] In a browser (html.nb-web, set at boot; never in the Android app) the splash and the sign-in screen that follows it show the photo in Light only. Night and Pink stay flat even with glass mode on. The boot style that did this for the splash is removed when the splash starts to fade, which let the photo flash back in. */
+html.nb-web body.night #splash, html.nb-web body.night #account-screen { background: #111111 !important }
+html.nb-web body.pink #splash, html.nb-web body.pink #account-screen { background: #c8365e !important }
+html.nb-web body.pink #splash::after, html.nb-web body.pink #account-screen::after { display: none !important }
+
+/* [2026-11-24 14:52 | web-account-bars] Browser only (html.nb-web; the Android app is untouched). Opening the Account screen counts as the splash, not the app: while html.nb-acct-bars is set, the page edge under the screen (the phone's bottom nav area) is painted like the splash, the photo in Light and the flat colour in Night and Pink, and the screen itself fills the live viewport instead of a pinned height. --nb-sbars is set by _nbWebAcctBars. */
+html.nb-web.nb-acct-bars { background-color: var(--nb-sbars, #141517) !important }
+html.nb-web.nb-acct-bars:not(.night):not(.pink) {
+  background-image: linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important;
+  background-size: 100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important;
+  background-position: 0 0, center top !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+html.nb-web #account-screen { width: auto; height: auto }
+/* [2026-11-24 15:20 | web-account-bars] Eye care: the tint element is a fixed box, so it cannot reach the strip under the page (the phone's bottom nav area). The page edge carries the same warm tint as its own top layer, in the splash look and in the normal page. */
+html.nb-eye-care { background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)) }
+html.nb-web.nb-acct-bars.nb-eye-care:not(.night):not(.pink) {
+  background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)), linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important;
+  background-size: 100% 100%, 100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important;
+  background-position: 0 0, 0 0, center top !important;
+}
+html.nb-web.nb-acct-bars.nb-eye-care.night, html.nb-web.nb-acct-bars.nb-eye-care.pink { background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)) !important }
+
 body.pink #splash::after, body.pink #account-screen::after {
   display: none;
 }
@@ -5346,7 +5400,24 @@ document.body.dataset.lockScrollY = window.scrollY;
     document.documentElement.classList.toggle('night', m === 'dark');
     document.documentElement.classList.toggle('pink', m === 'pink');
 
-    var splashColor = '#000000';
+    // [2026-11-24 14:31 | eye-care-edge] Eye care helpers (shared with the Settings and theme code below). The tint is an element under <html>; _nbEyeBlend mixes the same warm tint into a bar colour.
+    window._nbEyeApply = function (on) {
+      var de = document.documentElement, el = document.getElementById('nb-eye-tint');
+      de.classList.toggle('nb-eye-care', !!on);
+      if (on && !el) { el = document.createElement('div'); el.id = 'nb-eye-tint'; el.setAttribute('aria-hidden', 'true'); de.appendChild(el); }
+      else if (!on && el) el.remove();
+    };
+    window._nbEyeBlend = function (hex) {
+      try {
+        if (!document.documentElement.classList.contains('nb-eye-care') || !/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+        var t = [255, 150, 40], a = 0.16, o = '#';
+        for (var i = 0; i < 3; i++) o += ('0' + Math.round(parseInt(hex.substr(1 + 2 * i, 2), 16) * (1 - a) + t[i] * a).toString(16)).slice(-2);
+        return o;
+      } catch (e) { return hex; }
+    };
+    try { if (JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').eyeCare === true) window._nbEyeApply(true); } catch (e) {}
+    // [2026-11-24 14:31 | web-splash-bottom] changed: Light's splash colour was pure black, which is what showed under the phone's bottom nav area in a browser. It is now the bottom edge colour of the dimmed splash photo (same index as data-splash), so the area under the page reads as the photo carrying on.
+    var splashColor = ['#141517', '#121315', '#131313'][parseInt(document.documentElement.getAttribute('data-splash'), 10)] || '#141517';
     if (m === 'dark') splashColor = '#111111';
     else if (m === 'pink') splashColor = '#c8365e';
 
@@ -5374,7 +5445,7 @@ document.body.dataset.lockScrollY = window.scrollY;
 
     var meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.content = splashColor;
+    meta.content = window._nbEyeBlend(splashColor); // [2026-11-24 14:31 | eye-care-edge]
     document.head.appendChild(meta);
 
     document.documentElement.style.backgroundColor = splashColor;
@@ -5384,12 +5455,20 @@ document.body.dataset.lockScrollY = window.scrollY;
     var splashRule = 'html, body { background-color: ' + splashColor + ' !important; }';
     var nbGlassOn = true; // glass mode (default-on): the splash keeps its photo in every theme, so no flat-colour override
     try { nbGlassOn = JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').glassMode !== false; } catch (e) {}
-    if ((m === 'dark' || m === 'pink') && !nbGlassOn) {
+    // [2026-11-24 13:59 | web-splash-flat] In a browser (not the Android app) Night and Pink keep the flat colour splash even with glass mode on; only Light shows the photo there. The app is unchanged.
+    var nbIsNative = false;
+    try { nbIsNative = !!(window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : true)); } catch (e) {}
+    if (!nbIsNative) document.documentElement.classList.add('nb-web'); // [2026-11-24 14:12 | web-splash-flat] changed: the CSS below keeps Night and Pink flat after this boot style is removed at the end of the splash
+    if ((m === 'dark' || m === 'pink') && (!nbGlassOn || !nbIsNative)) {
       splashRule += ' #splash { background: ' + splashColor + ' !important; }';
+      if (m === 'pink') splashRule += ' #splash::after { display: none !important; }'; // [2026-11-24 13:59 | web-splash-flat] the glass sheet turns the pink splash dim back on; the flat pink has none
     } else {
       window.__nbSplashPhoto = true; // the splash shows its photo (not the flat classic colour): the slideshow may run
       // Same photo + dim as #splash, painted on the root, so nothing but the splash can ever show under or around it. Removed with this style in hideSplash().
-      splashRule += ' html { background-image: linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; }';
+      var nbEyeT = document.documentElement.classList.contains('nb-eye-care'); // [2026-11-24 | eye-care-splash-bars] Eye care: the splash photo rule below is !important and replaced the tint layer on <html>, so the strip under the page (bottom nav area) showed the photo untinted until the splash ended. Keep the tint as the top layer.
+      splashRule += ' html { background-image: ' + (nbEyeT ? 'linear-gradient(rgba(255,150,40,.16),rgba(255,150,40,.16)), ' : '') + 'linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; }';
+      // [2026-11-24 14:31 | web-splash-bottom] Browser only (the Android app keeps its tuned full-bleed): the fixed photo was sized to the short viewport, so the strip under the page (the phone's bottom nav area) showed the dark root colour instead of the photo. Size the dim and the photo from the LARGE viewport height and anchor them to the top, so the photo runs on down through that area. Declared after the cover rule above, so a browser without lvh keeps cover.
+      if (!nbIsNative) splashRule += ' html { background-size: ' + (nbEyeT ? '100% 100lvh, ' : '') + '100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important; background-position: ' + (nbEyeT ? '0 0, ' : '') + '0 0, center top !important; }';
     }
     style.textContent = splashRule;
     document.head.appendChild(style);
@@ -19187,6 +19266,10 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
+        web-account-bars   in a browser the Account screen counts as the splash: its colour or photo runs under the phone's bottom nav area too (this app)
+        web-splash-flat    in a browser (not the Android app) the splash photo shows in Light only; Night and Pink keep the flat colour splash (this app)
+        eye-care           an Eye care switch in Settings > Appearance, after Pause moving background: a warm tint over the whole app (this app)
+        story-strip-repaint the stories strip is not rewritten when nothing in it changed, so a story avatar loads once on open or restore instead of twice (this app)
         bars-match         the browser's bar colour (theme-color) is the page background in every theme, the same as the Android app's status and navigation bars (this app)
         story-avatar-shadow pressing a story avatar no longer shows the button tap ripple as a round shadow with flat edges over the avatar (this app)
         tick-explicit-tap  the About the tick box opens only when the tick icon itself is tapped; the header tick lost its extra tap room (this app)
@@ -19240,6 +19323,115 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-24 14:52 | topics: web-account-bars | AI: Claude (app) | Account screen fills the bottom nav area in a browser
+       Start state
+         webapp.html after web-splash-bottom (51939 lines). The launch splash painted the page edge and theme-color, but opening the Account screen later (header icon, signed out) did not, so the browser's bottom nav area showed the page background and the screen could stop short of it.
+       Work done
+         _nbWebAcctBars(on): in a browser only (html.nb-web), opening the Account screen sets html.nb-acct-bars (splash photo in Light, flat colour in Night and Pink, same colours as the splash) and the splash theme-color; closing restores the theme's bar colour. The screen is height auto in a browser so it fills the live viewport. applyTheme keeps it while the screen is open. [2026-11-24 14:52 | web-account-bars]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing else.
+       Found
+         Nothing.
+       Important details
+         The Android app is untouched (nb-web is never set there). Rejected: pinning the screen to --splash-h in a browser, which is what left the strip.
+       Removed
+         Nothing.
+       Untested
+         Not run in a phone browser. Check in Chrome on Android: signed out, tap the header Account icon in Light, Night and Pink, and the bottom nav area matches the screen; Back restores it.
+       Depends on
+         This file only.
+       Follow-up 2026-11-24 15:05
+         Report: in Light the bottom nav area was dark, not the photo. The bar colour is now measured from the bottom edge of the photo showing (dim applied) instead of a fixed near-black. A browser bar can only be one flat colour, so the photo itself cannot be drawn there; the page edge still carries the photo. Untested on a phone.
+       Follow-up 2026-11-24 15:20
+         Eye care: the tint element is fixed, so it could not tint the strip under the page. The page edge now carries the tint as its own layer (splash look and normal page), the edge colour is blended, and switching Eye care with the Account screen open keeps it. Untested on a phone.
+       Follow-up 2026-11-24 15:35
+         Eye care in the normal app, as soon as possible: a small script right after the data-splash one sets html.nb-eye-care, adds the tint element and a two-rule style before the big style block is parsed, so the tinted page edge (the phone's bottom nav area) and the tint are there from first paint. The browser bar colour (theme-color) was already tinted by the boot script and applyTheme. Untested on a phone.
+       Follow-up 2026-11-24 15:16
+         Eye care in the Android app, not only the Account screen / sign-in bottom nav, and as early as possible: (1) the first head script now also paints the native status and navigation bars with the tinted page colour (NbBars.setBg / setIcons, same blend and colours as _nbEyeBlend / _nbSyncBars) instead of waiting for load; (2) _nbSyncBars' paint is now window._nbBarsDo, and _nbEndLaunchBars and the splash exit run it before the web view stops being full-bleed, so no frame shows an untinted bar. Only active with Eye care on; no change when off. Untested on a phone.
+       Final state
+         html.nb-acct-bars, --nb-sbars, window._nbWebAcctBars, window._nbBarsDo.
+       Next
+         None.
+
+     SESSION 2026-11-24 13:59 | topics: web-splash-flat | AI: Claude (app) | Web mode: splash photo only in Light
+       Start state
+         webapp.html after the eye-care change (51847 lines). With glass mode on (the default) the boot paint script kept the splash photo in every theme; only glass mode off gave Night and Pink their flat colour splash.
+       Work done
+         Boot paint script: when Capacitor does not report a native platform, Night and Pink take the flat colour splash rule even with glass mode on (the same rule glass off already used). Pink also hides the splash dim, which the glass sheet would turn back on. __nbSplashPhoto stays unset there, so the slideshow does not run. The Android app takes the old path. [2026-11-24 13:59 | web-splash-flat]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         The sign-in screen (#account-screen) still shows its photo in Night and Pink in a browser, because the request named the splash only. Not changed.
+         Web is detected by Capacitor.isNativePlatform(); a browser that loads the Capacitor script reports false, and one that does not load it has no Capacitor at all, so both count as web.
+       Important details
+         Rejected: a CSS-only fix in the glass sheet. The boot paint also sets a photo on the root element and starts the slideshow, so the choice has to be made there.
+       Removed
+         Nothing.
+       Untested
+         Not run. In Chrome: Night and Pink open on the flat colour with no sliding photo, Light still shows the photo and slides. In the Android app all three themes look as before.
+       Depends on
+         This file only. Index.js, Privacy, Terms, LEGAL_DEFAULTS and TECH_NOTES untouched.
+       Final state
+         In a browser the splash photo shows only in Light.
+       Follow-up 2026-11-24 14:12
+         Run headless in Chrome, Night with glass on: the splash was flat while loading, but when it started to fade the photo came back (the boot style is removed in hideSplash) and the sign-in screen after it showed the photo. Fixed with html.nb-web (set at boot, web only) and CSS rules on #splash and #account-screen for Night and Pink. The sign-in screen is now flat too in a browser, which the first change had left alone.
+       Next
+         Say if the sign-in screen should follow.
+
+     SESSION 2026-11-24 13:45 | topics: eye-care | AI: Claude (app) | Eye care tile in Settings after Pause moving background
+       Start state
+         webapp.html after the story-strip-repaint change (51817 lines). Settings > Appearance: Theme, Glass mode, Pause moving background, Reduce motion, Floating page arrows, Hide Media sidebar icon.
+       Work done
+         New switch Eye care (eyeCare, off by default) right after Pause moving background. On adds body class nb-eye-care; CSS draws a fixed, tap-through warm tint (rgba 255,150,40,.16) over the whole screen in every theme. Wired in DEF and classes() like the other switches. [2026-11-24 13:45 | eye-care]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Request did not say what Eye care should do; chose a warm tint, the usual meaning. Strength is one number in the CSS.
+         The status and navigation bars the Android app paints with NbBars sit outside the web view, so the tint does not reach them.
+       Important details
+         Rejected: a separate overlay element (the body ::after is free and needs no markup). Rejected: needsGlass (it works with Glass mode off).
+       Removed
+         Nothing.
+       Untested
+         Not run. On the phone: switch on and off in Light, Night and Pink, open a dialog and a published page (tint covers them, taps still work), reopen the app (setting kept).
+       Depends on
+         This file only. Index.js, Privacy, Terms, LEGAL_DEFAULTS and TECH_NOTES untouched.
+       Final state
+         Settings > Appearance has an Eye care switch that tints the app warm.
+       Next
+         Say if you want it stronger, softer, or a slider.
+
+     SESSION 2026-11-24 13:43 | topics: story-strip-repaint | AI: Claude (app) | Story avatar loaded twice on open and restore
+       Start state
+         Uploaded webapp.html (51786 lines) and index.js. _nbPaintStoriesStrip rebuilt the whole strip with innerHTML on every call, so every ring image was destroyed and requested again. Paints on open: the boot /stories fetch, then the account stats reply (repaints if a story's avatarMode differs), then restore, sign-in or resume refreshes, each a new /stories fetch and paint.
+       Work done
+         _nbPaintStoriesStrip builds the markup first and returns without touching the DOM when it equals the last painted markup (strip._nbPaintedHtml). [2026-11-24 13:43 | story-strip-repaint]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         A story avatar flashing and reloading twice when the display picture loads on a new open or a restore.
+       Found
+         A repeat paint with the same markup also no longer retries a ring picture that failed and fell back to its letter; the letter stays until the markup changes (new picture version, new data).
+         The account stats handler still repaints when your own story's avatarMode differs from the account choice; that change is real, so left as is.
+       Important details
+         Rejected: patching the images in place (diffing src per ring). More code for the same result, since identical markup is the common case.
+       Removed
+         Nothing.
+       Untested
+         Not run. On the phone: cold open and restore while signed in (avatar loads once), change the profile picture (rings update), change Story picture in Settings (own rings update), sign out and in (strip repaints).
+       Depends on
+         This file only. Index.js, Privacy, Terms, LEGAL_DEFAULTS and TECH_NOTES untouched.
+       Final state
+         The strip repaints only when its content changes.
+       Next
+         If a flash remains, check on the phone whether it is the image itself being fetched again (the profile-image URL carries the version) rather than a repaint.
 
      SESSION 2026-11-19 07:54 | topics: bars-match | AI: Claude (app) | Browser bars look the same as the Android app's
        Start state
@@ -30508,11 +30700,10 @@ const DK = 'nb_theme_v1';
 const NB_THEME_TS_KEY = 'nb_theme_ts_v1';
 function _nbThemeTs() { try { return parseInt(localStorage.getItem(NB_THEME_TS_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
 /* [2026-11-12 | nav-bar-color] Android app only: paint the phone's bottom navigation area in the page background, in every theme and in glass or classic mode. The WebView ignores <meta theme-color>, so the native NbBars bridge (added by the MainActivity patch in codemagic.yaml) does it. No bridge (browser, iOS) means this does nothing. */
-window._nbSyncBars = function () {
-  if (window._nbBarsRaf) cancelAnimationFrame(window._nbBarsRaf);
-  window._nbBarsRaf = requestAnimationFrame(function () {
+window._nbBarsDo = function () { // [2026-11-24 15:16 | eye-care-app-bars] the paint itself, so the splash / launch exits can run it before the web view shrinks (no frame of an untinted bar); _nbSyncBars runs it next frame as before
     try {
       if (!window.NbBars || !document.body) return;
+      if (document.getElementById('splash') || window._nbLaunchScreen) return; // [2026-11-24 | launch-bars] splash + launch sign-in own the bottom area; _nbEndLaunchBars / the splash exit re-sync
       var b = document.body, cs = getComputedStyle(b);
       var col = (cs.getPropertyValue('--nb-bg') || '').trim() || cs.backgroundColor;
       var t = document.createElement('i'); t.style.color = col; b.appendChild(t);
@@ -30521,15 +30712,26 @@ window._nbSyncBars = function () {
       var hex = (m && m.length >= 3 && !(m[3] !== undefined && +m[3] === 0))
         ? '#' + m.slice(0, 3).map(function (n) { return ('0' + Math.round(+n).toString(16)).slice(-2); }).join('')
         : (b.classList.contains('night') ? '#080808' : b.classList.contains('pink') ? '#fff8fb' : '#ffffff');
+      hex = window._nbEyeBlend ? window._nbEyeBlend(hex) : hex; // [2026-11-24 14:31 | eye-care-edge] the native status/navigation bars are painted by NbBars (the page tint can't reach them), so give them the tinted colour
       if (window._nbBarsLast === hex) return;
       window._nbBarsLast = hex;
       NbBars.setBg(hex);
       if (NbBars.setIcons) NbBars.setIcons(((parseInt(hex.substr(1, 2), 16) * 299 + parseInt(hex.substr(3, 2), 16) * 587 + parseInt(hex.substr(5, 2), 16) * 114) / 255000) > 0.5); // dark status/nav icons on a light page, light icons on Night
     } catch (e) {}
-  });
+};
+window._nbSyncBars = function () {
+  if (window._nbBarsRaf) cancelAnimationFrame(window._nbBarsRaf);
+  window._nbBarsRaf = requestAnimationFrame(window._nbBarsDo);
 };
 window.addEventListener('load', function () { window._nbSyncBars(); setTimeout(window._nbSyncBars, 1500); });
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { window._nbBarsLast = null; window._nbSyncBars(); } });
+// [2026-11-24 14:31 | eye-care-edge] The browser's bar colour (theme-color): the page background, with Eye care's warm tint mixed in while it is on.
+window._nbSetThemeColor = function (mode) {
+  const themeColor = mode === 'dark' ? '#080808' : mode === 'pink' ? '#fff8fb' : '#ffffff';
+  let tc = document.querySelector('meta[name="theme-color"]');
+  if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
+  tc.content = window._nbEyeBlend ? window._nbEyeBlend(themeColor) : themeColor;
+};
 function applyTheme(mode) {
   document.body.classList.toggle('night', mode === 'dark');
   document.body.classList.toggle('pink', mode === 'pink');
@@ -30542,10 +30744,8 @@ function applyTheme(mode) {
   if (sun) sun.style.display = mode === 'pink' ? '' : 'none';
   if (blos) blos.style.display = mode === 'dark' ? '' : 'none';
   // [2026-11-19 07:54 | bars-match] changed: the browser's bar colour is the page background, the same colours the Android app paints its status and navigation bars with (--nb-bg: Light #fff, Night #080808, Pink #fff8fb). It was Night #111111 and Pink #c8365e, so the browser showed different bars from the app, and Pink got light icons instead of dark.
-  const themeColor = mode === 'dark' ? '#080808' : mode === 'pink' ? '#fff8fb' : '#ffffff';
-  let tc = document.querySelector('meta[name="theme-color"]');
-  if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
-  tc.content = themeColor;
+  window._nbSetThemeColor(mode); // [2026-11-24 14:31 | eye-care-edge] changed: the bar colour now goes through one helper that blends Eye care's tint
+  try { if (document.documentElement.classList.contains('nb-acct-bars') && window._nbWebAcctBars) window._nbWebAcctBars(true); } catch (e) {} // [2026-11-24 14:52 | web-account-bars] a theme change while the Account screen is open keeps the splash bars
   if (typeof window._nbSyncBars === 'function') window._nbSyncBars();
   if (typeof window._nbStRefresh === 'function') window._nbStRefresh();
 }
@@ -30580,7 +30780,8 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
   const KEY = 'nb_settings_v1';
   // [2026-11-13 14:27 | pause-bg] changed: Pause moving background is on by default (pauseSweep: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-03 08:38 | floating-nav] [2026-11-04 17:52 | floating-nav] changed: Floating page arrows is on by default (floatPageNav: true). A phone that already saved the setting keeps its own choice.
-  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false };
+  // [2026-11-24 13:45 | eye-care] Eye care is off by default (eyeCare: false).
+  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, eyeCare: false, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false };
   let S = null, lastPoll = 0;
   function load() {
     try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = Object.assign({}, DEF); }
@@ -30589,6 +30790,14 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
   function classes() {
     document.body.classList.toggle('nb-reduce-motion', !!window._nbSt('reduceMotion'));
     document.body.classList.toggle('nb-no-tips', !window._nbSt('tips'));
+    document.body.classList.toggle('nb-eye-care', !!window._nbSt('eyeCare')); // [2026-11-24 13:45 | eye-care]
+    // [2026-11-24 14:31 | eye-care-edge] the tint element lives under <html>; refresh the browser bar colour and the Android bars so they take the tint too
+    if (window._nbEyeApply) {
+      window._nbEyeApply(!!window._nbSt('eyeCare'));
+      window._nbBarsLast = null;
+      try { window._nbSetThemeColor(document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light'); } catch (e) {}
+      try { if (document.documentElement.classList.contains('nb-acct-bars') && window._nbWebAcctBars) window._nbWebAcctBars(true); } catch (e) {} // [2026-11-24 15:20 | web-account-bars] Eye care switched while the Account screen is open keeps the splash bars, tinted
+    }
     document.body.classList.toggle('nb-no-dashes', !!window._nbSt('hideDashes'));
     document.body.classList.toggle('nb-no-mdcount', !!window._nbSt('hideMdCount'));
     // Glass mode: the glass styling lives in <style data-nb-glass> sheets that stay disabled (media="not all") unless this is on.
@@ -30648,6 +30857,8 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'chips', k: 'theme', l: 'Theme', o: [['light', 'Light'], ['dark', 'Dark'], ['pink', 'Pink']], get: curTheme, set: setTheme },
       { t: 'sw', k: 'glassMode', l: 'Glass mode', s: 'Frosted, see-through bars, cards and sheets over a soft colour wash. Off keeps the classic solid look.' },
       { t: 'sw', k: 'pauseSweep', needsGlass: true, l: 'Pause moving background', s: 'Stops the moving background colours where they are. Turn off to continue. Try it if you see glitches, flickering, or parts of the screen missing, or if the app feels slow.', after: () => { try { if (window.nbWashUserPause) window.nbWashUserPause(!!window._nbSt('pauseSweep')); } catch (e) {} } },
+      // [2026-11-24 13:45 | eye-care] Warm tint over the screen to ease the glare. Kept on this phone.
+      { t: 'sw', k: 'eyeCare', l: 'Eye care', s: 'Adds a soft warm tint over the whole app to cut harsh light, handy at night or in the dark. Turn off for true colours.' },
       { t: 'sw', k: 'reduceMotion', l: 'Reduce motion', s: 'Fewer animations and transitions. Starts on if your phone has animations turned off.' },
       // [2026-11-03 08:38 | floating-nav] Reader setting, kept on this phone. Sent to a published page with the arrows message (nb-nav float).
       { t: 'sw', k: 'floatPageNav', l: 'Floating page arrows', s: 'Show the previous and next arrows and the list button as a see-through bar at the bottom of the page, next to the comments button, instead of under the page. The bar fades away when you stop scrolling.' },
@@ -33664,11 +33875,58 @@ function _nbStartAcctSplash3D() {
 function _nbStopAcctSplash3D() {
   if (_acctSplash3DCtl) { _acctSplash3DCtl.stop(); _acctSplash3DCtl = null; }
 }
+// [2026-11-24 14:52 | web-account-bars] Browser only: the Account screen is the splash, not the app, so while it is open the page edge and the browser's bar colour (theme-color) are the splash's, which carries the splash colour down through the phone's bottom nav area. Closing puts back the page background and the theme's bar colour. The Android app has its own bars (NbBars), so this does nothing there.
+window._nbWebAcctBars = function (on) {
+  try {
+    const de = document.documentElement;
+    if (!de.classList.contains('nb-web')) return;
+    if (on) {
+      const mode = document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light';
+      const col = mode === 'dark' ? '#111111' : mode === 'pink' ? '#c8365e' : (['#141517', '#121315', '#131313'][parseInt(de.getAttribute('data-splash'), 10)] || '#141517');
+      de.style.setProperty('--nb-sbars', col);
+      de.classList.add('nb-acct-bars');
+      if (window._nbEyeBlend) de.style.setProperty('--nb-sbars', window._nbEyeBlend(col)); // [2026-11-24 15:20 | web-account-bars] Eye care tint on the page edge colour
+      let tc = document.querySelector('meta[name="theme-color"]');
+      if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
+      tc.content = window._nbEyeBlend ? window._nbEyeBlend(col) : col;
+      // [2026-11-24 15:05 | web-account-bars] changed: in Light the bar colour was a fixed near-black that did not match the photo, so the bottom nav area read as a dark band. It is now measured from the bottom edge of the photo actually showing, with the splash dim applied (bottom dim is 60% black), so the bar carries on from the picture.
+      if (mode === 'light') {
+        const m = (getComputedStyle(de).getPropertyValue('--splash-img') || '').match(/url\(\s*["']?([^"')]+)["']?\s*\)/);
+        if (m) {
+          const img = new Image();
+          img.onload = function () {
+            try {
+              if (!de.classList.contains('nb-acct-bars')) return;
+              const c = document.createElement('canvas'); c.width = 16; c.height = 2;
+              const g = c.getContext('2d');
+              const h = Math.max(1, Math.round(img.naturalHeight * 0.04));
+              g.drawImage(img, 0, img.naturalHeight - h, img.naturalWidth, h, 0, 0, 16, 2);
+              const d = g.getImageData(0, 0, 16, 2).data;
+              let r = 0, gr = 0, b = 0, n = d.length / 4;
+              for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
+              const hx = v => ('0' + Math.round(v / n * 0.4).toString(16)).slice(-2);
+              const out = '#' + hx(r) + hx(gr) + hx(b);
+              de.style.setProperty('--nb-sbars', window._nbEyeBlend ? window._nbEyeBlend(out) : out);
+              const t = document.querySelector('meta[name="theme-color"]');
+              if (t) t.content = window._nbEyeBlend ? window._nbEyeBlend(out) : out;
+            } catch (e) {}
+          };
+          img.src = m[1];
+        }
+      }
+    } else {
+      de.classList.remove('nb-acct-bars');
+      de.style.removeProperty('--nb-sbars');
+      if (window._nbSetThemeColor) window._nbSetThemeColor(document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light');
+    }
+  } catch (e) {}
+};
 function openAccountScreen(focusInvite) {
   try { _nbSelDrop(); } catch (e) {} // the Account screen covers the Library; don't leave its selection FABs floating over it
   try { if (window._nbSplashBgRefresh) window._nbSplashBgRefresh(); } catch (e) {} // re-decode the background before it shows
   nbRenderAccountDialog();
   document.getElementById('account-screen').classList.add('open');
+  window._nbWebAcctBars(true); // [2026-11-24 14:52 | web-account-bars]
   lockScroll();
   _nbStartAcctSplash3D();
   if (focusInvite === true && !nbIsSignedIn() && document.getElementById('account-invite-fields').style.display !== 'block') nbToggleSigninInvite();
@@ -33687,9 +33945,11 @@ function closeAccountScreen() {
   // A sign-in started from Settings isn't tied to this screen, so back stays available.
   if (signinBtn && signinBtn.disabled && window._nbSigninOrigin !== 'settings') return;
   document.getElementById('account-screen').classList.remove('open');
+  window._nbWebAcctBars(false); // [2026-11-24 14:52 | web-account-bars]
   unlockScroll();
   _nbStopAcctSplash3D();
   _nbReleaseToastHold(true);
+  if (window._nbLaunchScreen && window._nbEndLaunchBars) window._nbEndLaunchBars(); // [2026-11-24 | launch-bars] the launch sign-in screen is the last thing that keeps the splash infill
 }
 // Delete account is collapsed behind "Show more" by default (see
 // toggleLogoutMore) so it isn't the first thing tapped by mistake —
@@ -33963,10 +34223,25 @@ async function hideSplash() {
   // boot IIFE also sets — is what was actually pinning the background
   // after splash exit. Drop it here so both html and body fall back to
   // their normal (themed) CSS once the splash is gone.
-  const flashStyle = document.querySelector('style[data-flash]');
-  if (flashStyle) flashStyle.remove();
-  document.documentElement.style.backgroundColor = '';
-  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {} }, 420);
+  // [2026-11-24 | launch-bars] changed: on a fresh launch the sign-in screen follows the splash, so the splash background (html) and the full-screen bottom area stay until that screen is closed (closeAccountScreen -> _nbEndLaunchBars). Only then do the bars adopt the page background. A resume has no sign-in screen, so it ends here as before.
+  const keepBars = !window.__nbIsLikelyResume;
+  window._nbLaunchScreen = keepBars;
+  window._nbEndLaunchBars = function () {
+    window._nbLaunchScreen = false;
+    const fs = document.querySelector('style[data-flash]');
+    if (fs) fs.remove();
+    document.documentElement.style.backgroundColor = '';
+    window._nbBarsLast = null; try { if (window._nbBarsDo) window._nbBarsDo(); } catch (e) {} // [2026-11-24 15:16 | eye-care-app-bars] tinted bars first, then the web view stops being full-bleed
+    try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {}
+    window._nbBarsLast = null;
+    try { if (typeof window._nbSyncBars === 'function') window._nbSyncBars(); } catch (e) {}
+  };
+  if (!keepBars) {
+    const flashStyle = document.querySelector('style[data-flash]');
+    if (flashStyle) flashStyle.remove();
+    document.documentElement.style.backgroundColor = '';
+  }
+  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); if (!keepBars) { window._nbBarsLast = null; try { if (window._nbBarsDo) window._nbBarsDo(); } catch (e) {} try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {} window._nbBarsLast = null; try { if (typeof window._nbSyncBars === 'function') window._nbSyncBars(); } catch (e) {} } }, 420);
   // Every fresh launch lands on the sign-in screen (signed in or not) until Back is
   // tapped; a quick resume from the background keeps whatever screen they were on.
   // Opened last so the scroll lock it takes isn't undone by unlockScroll() above.
@@ -37814,6 +38089,7 @@ function _nbStoryAvatarFallback(imgEl, storyImageUrl, initial) {
   }
   _nbStoryImgError(imgEl, initial);
 }
+// [2026-11-24 13:43 | story-strip-repaint] the strip is only rewritten when its markup actually changed (see the end of this function)
 function _nbPaintStoriesStrip() {
   const strip = document.getElementById('nb-stories-strip');
   if (!strip) return;
@@ -37831,7 +38107,7 @@ function _nbPaintStoriesStrip() {
   _nbStoriesCache.sort((a, b) => _rank(a) - _rank(b));
   strip.classList.toggle('has-stories', _nbStoriesCache.length > 0);
   _nbSyncStoriesStripVisibility();
-  strip.innerHTML = _nbStoriesCache.map(s => {
+  const html = _nbStoriesCache.map(s => {
     const sid = escJs(s.slug);
     const asub = escJs(s.authorSub);
     const title = escJs(s.title || 'Untitled note');
@@ -37864,6 +38140,10 @@ function _nbPaintStoriesStrip() {
       <span class="nb-story-label">${esc(s.title || 'Untitled')}</span>
     </button>`;
   }).join('');
+  // [2026-11-24 13:43 | story-strip-repaint] Same markup as the last paint: leave the DOM alone. Rewriting it replaced every ring <img>, so each avatar reloaded and flashed again (boot fetch, then account stats, restore or resume refresh). A ring whose picture failed keeps its letter instead of retrying.
+  if (strip._nbPaintedHtml === html) return;
+  strip._nbPaintedHtml = html;
+  strip.innerHTML = html;
 }
 // Shared with #hdr-title-text on the main header: measures the title text
 // against its clipped container and only turns on the horizontal scroll
