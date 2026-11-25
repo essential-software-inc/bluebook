@@ -20,28 +20,6 @@
   document.documentElement.setAttribute('data-splash', String(i));
 })();
 </script>
-<script>
-// [2026-11-24 15:35 | web-account-bars] Eye care, as early as the page can: the class, the tint element and a small rule for both go in before the big style block below is parsed, so the warm tint (and the tinted page edge under the phone's bottom nav area) is there from the first paint, not after the boot script further down. The full rules and _nbEyeApply later find the same class and element and change nothing.
-(function () {
-  try {
-    if (JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').eyeCare !== true) return;
-    var de = document.documentElement;
-    de.classList.add('nb-eye-care');
-    var st = document.createElement('style');
-    st.textContent = 'html.nb-eye-care{background-image:linear-gradient(rgba(255,150,40,.16),rgba(255,150,40,.16))}html.nb-eye-care>#nb-eye-tint{display:block;position:fixed;left:0;right:0;top:-120px;bottom:-120px;z-index:2147482000;pointer-events:none;background:rgba(255,150,40,.16);transform:translateZ(0);will-change:transform}';
-    document.head.appendChild(st);
-    var el = document.createElement('div'); el.id = 'nb-eye-tint'; el.setAttribute('aria-hidden', 'true'); de.appendChild(el);
-    // [2026-11-24 15:16 | eye-care-app-bars] Android app: the native status and navigation bars take the tinted page colour from this first script too, not only after load (the bridge is injected before page scripts run). Same blend as _nbEyeBlend and same colours as _nbSyncBars.
-    if (window.NbBars) {
-      var tm = localStorage.getItem('nb_theme_v1') || 'light';
-      var bc = tm === 'dark' ? [8, 8, 8] : tm === 'pink' ? [255, 248, 251] : [255, 255, 255], tt = [255, 150, 40], bh = '#';
-      for (var q = 0; q < 3; q++) { bc[q] = Math.round(bc[q] * .84 + tt[q] * .16); bh += ('0' + bc[q].toString(16)).slice(-2); }
-      NbBars.setBg(bh);
-      if (NbBars.setIcons) NbBars.setIcons((bc[0] * 299 + bc[1] * 587 + bc[2] * 114) / 255000 > 0.5);
-    }
-  } catch (e) {}
-})();
-</script>
 <title>Bluebook: A Notepad</title>
 <style>
 @font-face{
@@ -744,9 +722,9 @@ body.pink #_wptoast .toast-ok {
 body.nb-reduce-motion .nb-ripple-clip { display: none }
 
 /* [2026-11-24 13:45 | eye-care] Eye care: a warm, slightly dimmed tint over the whole screen (all themes) to cut harsh light. It takes no taps and sits under the boot lock only. */
-/* [2026-11-24 14:31 | eye-care-edge] changed: the tint is a real element (#nb-eye-tint) directly under <html>, not body::after. It sits outside body (so body-level hides/repaint nudges and scroll-time layer changes can't drop it over the app's bottom nav), has its own compositor layer, and is pushed 120px past every screen edge so it also covers the browser's edge-to-edge system-bar area. The browser bar colour (theme-color) and the Android app's native bars (NbBars.setBg) are blended with the same tint in JS. */
-#nb-eye-tint { display: none }
-html.nb-eye-care > #nb-eye-tint { display: block; position: fixed; left: 0; right: 0; top: -120px; bottom: -120px; z-index: 2147482000; pointer-events: none; background: rgba(255, 150, 40, .16); transform: translateZ(0); will-change: transform }
+body.nb-eye-care::after { content: ''; position: fixed; inset: 0; z-index: 2147482000; pointer-events: none; background: rgba(255, 150, 40, .08) }
+/* [2026-11-25 | eye-care-softer] changed: a flat orange layer lifted dark colours into a grey-brown (Night turned navy into brown). Multiply keeps darks dark and only warms light colours. The flat layer above is the fallback where blending is not supported. */
+@supports (mix-blend-mode: multiply) { body.nb-eye-care::after { mix-blend-mode: multiply; background: rgb(255, 238, 215) } }
 
 /* Switches: springy thumb, stretches while pressed (like a physical toggle), track colour fades */
 .nb-switch-track { transition: background-color .26s ease, box-shadow .2s ease !important }
@@ -831,6 +809,7 @@ body .cat-pill.active, body .md-chip.on, body .md-srcb.on, body .st-chip.on, bod
 .cat-capsule { display: inline-flex; flex-shrink: 0 }
 #feed-cats .cat-capsule .cat-pill:first-child { border-radius: 99px 0 0 99px }
 #feed-cats .cat-capsule .cat-pill:last-child { border-radius: 0 99px 99px 0; margin-left: -1px }
+#feed-cats .cat-capsule .cat-pill:not(:first-child):not(:last-child) { border-radius: 0; margin-left: -1px } /* a middle tab (Liked, in Subscribed | Liked | Templates) */
 #feed-cats .cat-capsule .cat-pill.active { position: relative; z-index: 1 }
 /* the seam between the two tabs (the second pill's left border, overlapping the first's right
    border): only coloured while both are inactive; next to an active tab it's that tab's blue */
@@ -862,6 +841,8 @@ body.pink #feed-cats,body.pink #msg-cats { --cat-ring: rgba(224,86,140,.65); --c
 #feed-cats .cat-capsule.cat-lift { border-radius: 99px; box-shadow: 0 3px 9px var(--cat-drop) }
 #feed-cats .cat-capsule.cat-lift .cat-pill:first-child { box-shadow: inset 1px 0 0 0 var(--cat-ring), inset 0 1px 0 0 var(--cat-ring), inset 0 -1px 0 0 var(--cat-ring) }
 #feed-cats .cat-capsule.cat-lift .cat-pill:last-child { box-shadow: inset -1px 0 0 0 var(--cat-ring), inset 0 1px 0 0 var(--cat-ring), inset 0 -1px 0 0 var(--cat-ring) }
+#feed-cats .cat-capsule.cat-lift .cat-pill:not(:first-child):not(:last-child) { box-shadow: inset 0 1px 0 0 var(--cat-ring), inset 0 -1px 0 0 var(--cat-ring) }
+#feed-cats .cat-capsule.cat-lift .cat-pill.active:not(:first-child):not(:last-child) { box-shadow: inset 0 1px 0 0 var(--cat-ring-on), inset 0 -1px 0 0 var(--cat-ring-on) }
 #feed-cats .cat-capsule.cat-lift .cat-pill.active:first-child { box-shadow: inset 1px 0 0 0 var(--cat-ring-on), inset 0 1px 0 0 var(--cat-ring-on), inset 0 -1px 0 0 var(--cat-ring-on) }
 #feed-cats .cat-capsule.cat-lift .cat-pill.active:last-child { box-shadow: inset -1px 0 0 0 var(--cat-ring-on), inset 0 1px 0 0 var(--cat-ring-on), inset 0 -1px 0 0 var(--cat-ring-on) }
 /* Double-click (double-tap) a custom pill to rename it in place (see _nbCatRename): the pill keeps its size, border and colours, and its
@@ -1499,6 +1480,24 @@ body.night #al-fab-del, body.pink #al-fab-del { background: #d33; border-color: 
 #nb-alert-fabs .al-fab { height: 48px; min-height: 48px; max-height: 48px; padding-top: 0; padding-bottom: 0; line-height: 1; align-self: center; box-sizing: border-box }
 #nb-alert-fabs .al-fab span { line-height: 1; display: block }
 @media (prefers-reduced-motion: reduce) { #nb-alert-fabs, #nb-alert-fabs.on, .al-fab, .alert-card::before, .alert-card::after { transition: none } }
+
+/* [2026-11-25 09:25 | library-nudges] Library reminders: one short card above the notes, built on .guide-card so Light, Night, Pink and Glass already style it. The tint and ring copy the unread alert look (--al-acc, --al-on). */
+#nb-nudge { max-width: 760px; margin: 0 auto; padding: .6rem .9rem 0; transition: opacity .25s }
+#nb-nudge[hidden] { display: none }
+.nb-nudge-card { cursor: default }
+.nb-nudge-card::before, .nb-nudge-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none }
+.nb-nudge-card::before { z-index: -1; background: var(--al-acc); opacity: var(--al-tint) }
+.nb-nudge-card::after { box-shadow: inset 0 0 0 1.5px var(--al-acc); opacity: .5 }
+.nb-nudge-card .gc-desc-text { display: block; -webkit-line-clamp: unset; overflow: visible; overflow-wrap: anywhere }
+.nb-nudge-row { display: flex; align-items: center; gap: .35rem; margin-top: .5rem }
+.nb-nudge-go, .nb-nudge-x { appearance: none; -webkit-appearance: none; border: 0; font: inherit; font-size: .82rem; cursor: pointer; -webkit-tap-highlight-color: transparent }
+.nb-nudge-go { border-radius: 99px; padding: .42rem 1rem; font-weight: 700; background: var(--al-acc); color: var(--al-on); transition: opacity .15s }
+.nb-nudge-go:active { opacity: .8 }
+.nb-nudge-x { background: none; padding: .42rem .7rem; color: #8a9099 }
+body.night .nb-nudge-x { color: #8f98a3 }
+body.pink .nb-nudge-x { color: #a86b85 }
+body.nb-reduce-motion #nb-nudge, body.nb-reduce-motion .nb-nudge-go { transition: none }
+@media (prefers-reduced-motion: reduce) { #nb-nudge, .nb-nudge-go { transition: none } }
 /* An outline, not box-shadow: every theme sets the card's box-shadow with !important, which hid the old ring. --al-acc keeps Night free of blue. */
 .guide-card.nb-flash { outline: 3px solid color-mix(in srgb, var(--al-acc) 60%, transparent); outline-offset: 1px; transition: outline-color .4s }
 .gc-tags-row {
@@ -2353,6 +2352,16 @@ body.pink #pub-slug-prefix { color: rgba(26, 10, 18, .5) }
 
 #edit-reset-overlay.open {
   display: flex
+}
+
+/* [2026-11-25 | page-duplicate] the New canvas dialog opened from a page in the viewer sits above the viewer (z 950, 9100 over Media) */
+#edit-reset-overlay.over-viewer {
+  z-index: 9400
+}
+
+/* [2026-11-25 | page-duplicate-legal] the paywall opened from a page in the viewer (free note limit) sits above the viewer too */
+#paywall-overlay.over-viewer {
+  z-index: 9400
 }
 
 #sync-conflict-overlay {
@@ -3929,25 +3938,6 @@ html.nb-web body.night #splash, html.nb-web body.night #account-screen { backgro
 html.nb-web body.pink #splash, html.nb-web body.pink #account-screen { background: #c8365e !important }
 html.nb-web body.pink #splash::after, html.nb-web body.pink #account-screen::after { display: none !important }
 
-/* [2026-11-24 14:52 | web-account-bars] Browser only (html.nb-web; the Android app is untouched). Opening the Account screen counts as the splash, not the app: while html.nb-acct-bars is set, the page edge under the screen (the phone's bottom nav area) is painted like the splash, the photo in Light and the flat colour in Night and Pink, and the screen itself fills the live viewport instead of a pinned height. --nb-sbars is set by _nbWebAcctBars. */
-html.nb-web.nb-acct-bars { background-color: var(--nb-sbars, #141517) !important }
-html.nb-web.nb-acct-bars:not(.night):not(.pink) {
-  background-image: linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important;
-  background-size: 100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important;
-  background-position: 0 0, center top !important;
-  background-repeat: no-repeat !important;
-  background-attachment: fixed !important;
-}
-html.nb-web #account-screen { width: auto; height: auto }
-/* [2026-11-24 15:20 | web-account-bars] Eye care: the tint element is a fixed box, so it cannot reach the strip under the page (the phone's bottom nav area). The page edge carries the same warm tint as its own top layer, in the splash look and in the normal page. */
-html.nb-eye-care { background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)) }
-html.nb-web.nb-acct-bars.nb-eye-care:not(.night):not(.pink) {
-  background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)), linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important;
-  background-size: 100% 100%, 100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important;
-  background-position: 0 0, 0 0, center top !important;
-}
-html.nb-web.nb-acct-bars.nb-eye-care.night, html.nb-web.nb-acct-bars.nb-eye-care.pink { background-image: linear-gradient(rgba(255,150,40,.16), rgba(255,150,40,.16)) !important }
-
 body.pink #splash::after, body.pink #account-screen::after {
   display: none;
 }
@@ -5400,24 +5390,7 @@ document.body.dataset.lockScrollY = window.scrollY;
     document.documentElement.classList.toggle('night', m === 'dark');
     document.documentElement.classList.toggle('pink', m === 'pink');
 
-    // [2026-11-24 14:31 | eye-care-edge] Eye care helpers (shared with the Settings and theme code below). The tint is an element under <html>; _nbEyeBlend mixes the same warm tint into a bar colour.
-    window._nbEyeApply = function (on) {
-      var de = document.documentElement, el = document.getElementById('nb-eye-tint');
-      de.classList.toggle('nb-eye-care', !!on);
-      if (on && !el) { el = document.createElement('div'); el.id = 'nb-eye-tint'; el.setAttribute('aria-hidden', 'true'); de.appendChild(el); }
-      else if (!on && el) el.remove();
-    };
-    window._nbEyeBlend = function (hex) {
-      try {
-        if (!document.documentElement.classList.contains('nb-eye-care') || !/^#[0-9a-f]{6}$/i.test(hex)) return hex;
-        var t = [255, 150, 40], a = 0.16, o = '#';
-        for (var i = 0; i < 3; i++) o += ('0' + Math.round(parseInt(hex.substr(1 + 2 * i, 2), 16) * (1 - a) + t[i] * a).toString(16)).slice(-2);
-        return o;
-      } catch (e) { return hex; }
-    };
-    try { if (JSON.parse(localStorage.getItem('nb_settings_v1') || '{}').eyeCare === true) window._nbEyeApply(true); } catch (e) {}
-    // [2026-11-24 14:31 | web-splash-bottom] changed: Light's splash colour was pure black, which is what showed under the phone's bottom nav area in a browser. It is now the bottom edge colour of the dimmed splash photo (same index as data-splash), so the area under the page reads as the photo carrying on.
-    var splashColor = ['#141517', '#121315', '#131313'][parseInt(document.documentElement.getAttribute('data-splash'), 10)] || '#141517';
+    var splashColor = '#000000';
     if (m === 'dark') splashColor = '#111111';
     else if (m === 'pink') splashColor = '#c8365e';
 
@@ -5445,7 +5418,7 @@ document.body.dataset.lockScrollY = window.scrollY;
 
     var meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.content = window._nbEyeBlend(splashColor); // [2026-11-24 14:31 | eye-care-edge]
+    meta.content = splashColor;
     document.head.appendChild(meta);
 
     document.documentElement.style.backgroundColor = splashColor;
@@ -5465,10 +5438,7 @@ document.body.dataset.lockScrollY = window.scrollY;
     } else {
       window.__nbSplashPhoto = true; // the splash shows its photo (not the flat classic colour): the slideshow may run
       // Same photo + dim as #splash, painted on the root, so nothing but the splash can ever show under or around it. Removed with this style in hideSplash().
-      var nbEyeT = document.documentElement.classList.contains('nb-eye-care'); // [2026-11-24 | eye-care-splash-bars] Eye care: the splash photo rule below is !important and replaced the tint layer on <html>, so the strip under the page (bottom nav area) showed the photo untinted until the splash ended. Keep the tint as the top layer.
-      splashRule += ' html { background-image: ' + (nbEyeT ? 'linear-gradient(rgba(255,150,40,.16),rgba(255,150,40,.16)), ' : '') + 'linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; }';
-      // [2026-11-24 14:31 | web-splash-bottom] Browser only (the Android app keeps its tuned full-bleed): the fixed photo was sized to the short viewport, so the strip under the page (the phone's bottom nav area) showed the dark root colour instead of the photo. Size the dim and the photo from the LARGE viewport height and anchor them to the top, so the photo runs on down through that area. Declared after the cover rule above, so a browser without lvh keeps cover.
-      if (!nbIsNative) splashRule += ' html { background-size: ' + (nbEyeT ? '100% 100lvh, ' : '') + '100% 100lvh, max(100vw, calc(100lvh * .5625)) auto !important; background-position: ' + (nbEyeT ? '0 0, ' : '') + '0 0, center top !important; }';
+      splashRule += ' html { background-image: linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.60)), var(--splash-img, var(--splash-img-0)) !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-attachment: fixed !important; }';
     }
     style.textContent = splashRule;
     document.head.appendChild(style);
@@ -5763,6 +5733,8 @@ window.addEventListener('load',function(){if(document.getElementById('splash'))f
         <div class="nb-empty-title" id="notes-empty-title">Welcome to Bluebook</div>
         <div class="nb-empty-sub" id="notes-empty-sub">Mix text, photos, voice notes, checklists, and more into scrapbook-style notes. Tap the + button to create your first note. It'll show up here, sorted by category.</div>
       </div>
+      <!-- [2026-11-25 09:25 | library-nudges] Library reminder card, filled by nbNudgeRender -->
+      <div id="nb-nudge" hidden></div>
       <div class="nb-carousel" id="nb-onboard-carousel">
           <div class="nb-carousel-viewport">
             <div class="nb-carousel-track" id="nb-onboard-track">
@@ -7758,7 +7730,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <button class="lg-find-btn" id="privacy-find-next" type="button" aria-label="Next match" disabled><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,8 10,14 16,8"/></svg></button>
     </div>
     <div id="privacy-body">
-      <p><em>Effective 16 November 2026</em></p>
+      <p><em>Effective 25 November 2026</em></p>
       <p><strong>Bluebook</strong> is published by Essential Software (&ldquo;we&rdquo;, &ldquo;us&rdquo;, and &ldquo;our&rdquo; in this policy), and we're glad you're here. This page explains in plain language what the app stores, where it lives, and what leaves your device.</p>
       <h3>On-device storage</h3>
       <p>Your pages, drafts, images, favourites, playlists, preferences and app settings all stay on your device. There's one exception: when you're signed in, we keep track of which stories you've opened on our servers, under your account (see "Stories, subscriptions &amp; likes" below). For each account signed in on the device, the app also keeps a copy of which notes you've liked and which accounts you subscribe to (signing out clears the subscription copy). It keeps a short queue of any likes or subscriptions you tapped while offline that haven't been sent yet. If you sign in with Google, your notes, along with your favourites, playlists, theme choice and your "All my notes" switches from Settings, are also backed up to our servers (see below). Those switches are kept on your device separately for each account, so one account's choices never touch another account's pages, even on a shared phone.</p>
@@ -7771,9 +7743,9 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <p>One last thing: app lock is like a door lock for the app. It doesn't scramble the notes stored on your device. For extra privacy, keep your phone's own screen lock on too.</p>
       <h3>Google sign-in &amp; sync</h3>
       <p>Signing in is totally optional, and Google handles it, so we never see your Google password. We get your Google account ID and email address, and Google also tells us whether it has checked that email. We keep them along with your sign-up date, your last sign-in date, the last time the app was active on your account (see "Activity counts" below), and a code that keeps you signed in. That code lasts up to 30 days. While you're signed in, we back up your notes (including embedded images and voice notes) to our servers so you can restore them on another device. We also back up your favourites, your playlists (their names and the songs and videos you put in them), your theme choice and your "All my notes" switches (see "All my notes" below). Your Pro purchase (if you have one), any ad view credit balance and your page space balance (see "In-app purchases" below) are linked to your account too, so they come with you. Signing out stops syncing. Your backup stays put, so you can pick it up again when you sign back in, and deleting your account removes it, as described below. If an image in your backup isn't used by any note any more (for example, after you delete a note or swap an image), we delete it once it's more than 14 days old.</p>
-      <p>Your account is yours to keep or remove. You can delete it any time by tapping the account icon and choosing Delete account under Show more. That signs this device out and schedules your account for deletion in 30 days. It can take up to a day longer than the 30 days. When it does, we permanently delete your account record and your backup: your synced notes, images, voice notes and playlists. We also delete your display name and profile picture, your subscriptions (the ones you made and the ones to you), the records of the stories you've opened, and your likes and subscriptions (including the times we noted for them). Your running ads and their view statistics go too, along with any unspent ad view credit balance, your page space balance and its list, your invite code and any invites you made or used, and your ad access record. Last, we delete your team memberships, the list of people you've blocked from inviting you, your "Invitations to edit" choice, and your alerts (including ones you deleted from your list). In team chats, we delete your voice messages and images, your reactions and your read markers. Your text messages and summaries stay for the team with your name taken off, and if you were the author of a team, its whole chat is deleted (see "Messages (team chat)" above). We also take down every page you published (we keep a copy of each page, along with its record, for about 30 more days, as described under "Publishing a page"). Until then, your published pages and stories stay online. Changed your mind? Sign back in with the same Google account during the 30 days and the deletion is cancelled, with full access restored. Every device where you're signed in gets signed out as part of the deletion. Deleting your account doesn't delete anything held by Google or RevenueCat. Their own policies cover that.</p>
+      <p>Your account is yours to keep or remove. You can delete it any time by tapping the account icon and choosing Delete account under Show more. That signs this device out and schedules your account for deletion in 30 days. It can take up to a day longer than the 30 days. When it does, we permanently delete your account record and your backup: your synced notes, images, voice notes and playlists. We also delete your display name and profile picture, your subscriptions (the ones you made and the ones to you), the records of the stories you've opened, and your likes and subscriptions (including the times we noted for them). Your running ads and their view statistics go too, along with any unspent ad view credit balance, your page space balance and its list, your purchase notes, your invite code and any invites you made or used, and your ad access record. Last, we delete your team memberships, the list of people you've blocked from inviting you, your "Invitations to edit" choice, and your alerts (including ones you deleted from your list). In team chats, we delete your voice messages and images, your reactions and your read markers. Your text messages and summaries stay for the team with your name taken off, and if you were the author of a team, its whole chat is deleted (see "Messages (team chat)" above). We also take down every page you published (we keep a copy of each page, along with its record, for about 30 more days, as described under "Publishing a page"). Until then, your published pages and stories stay online. Changed your mind? Sign back in with the same Google account during the 30 days and the deletion is cancelled, with full access restored. Every device where you're signed in gets signed out as part of the deletion. Deleting your account doesn't delete anything held by Google or RevenueCat. Their own policies cover that.</p>
       <h3>In-app purchases</h3>
-      <p>Unlocking Pro, buying view packages and buying page space packs are all purchases made through Google Play Billing. RevenueCat, a third-party subscription service, handles them for us. RevenueCat gets the purchase details it needs to confirm what you bought, linked to an ID. Before you sign in, that's a temporary ID RevenueCat makes for your install. Once you sign in, it's your Google account ID, which is what lets a purchase follow you to another device. Whether Pro is active is checked with RevenueCat, and the answer is kept on your device. We add the view credits you buy to your account. We keep a list of your view credits, and every entry has the time. The list shows each purchase (for a particular ad, or added to your balance from Settings), each time views are put on an ad (with that ad's address), each refund or return, and each gift of free views for an invite. Views returned to you stay in your balance, and you can put them on an ad without buying again. That doesn't involve Google Play or RevenueCat. If Google Play refunds a purchase, we take those views back. That list is deleted with your account. Page space works the same way. We add the space you buy to your page space balance and keep a record of it: your purchases, the pages it is used on, and any refunds. If Google Play refunds a pack, we take that space back. That record is deleted with your account. We never get your payment details, because Google handles those directly. See <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat's own privacy policy</a> for how it handles what it receives.</p>
+      <p>Unlocking Pro, buying view packages and buying page space packs are all purchases made through Google Play Billing. RevenueCat, a third-party subscription service, handles them for us. RevenueCat gets the purchase details it needs to confirm what you bought, linked to an ID. Before you sign in, that's a temporary ID RevenueCat makes for your install. Once you sign in, it's your Google account ID, which is what lets a purchase follow you to another device. Whether Pro is active is checked with RevenueCat, and the answer is kept on your device. We also keep a note that you bought Pro, with the date and the price you paid. We add the view credits you buy to your account. We keep a list of your view credits, and every entry has the time. The list shows each purchase (for a particular ad, or added to your balance from Settings), each time views are put on an ad (with that ad's address), each refund or return, and each gift of free views for an invite. Views returned to you stay in your balance, and you can put them on an ad without buying again. That doesn't involve Google Play or RevenueCat. If Google Play refunds a purchase, we take those views back. That list is deleted with your account. Page space works the same way. We add the space you buy to your page space balance and keep a record of it: your purchases, the pages it is used on, and any refunds. If Google Play refunds a pack, we take that space back. That record is deleted with your account. For every purchase we also keep a short note: the date, the price, and what kind of money you paid in. That helps us see how the app is doing, like how many people come back to buy again. If Google Play refunds a purchase, we mark it as refunded. These notes are deleted with your account. If you bought something before you signed in, we can't tie that note to your account, so deleting your account won't remove it. We never get your payment details, because Google handles those directly. See <a href="https://www.revenuecat.com/privacy" target="_blank" rel="noopener">RevenueCat's own privacy policy</a> for how it handles what it receives.</p>
       <h3>Publishing a page</h3>
       <p>Publishing is always your choice, and it only happens when you tap Publish. We receive your page's content, its title, description and tags (if you've added them), when the note was created, and the address you choose, and we store them so the page can be shown at a public link. Anyone with that link can view the page. If you've given the note a category, we save that too. It's just your own private label, so it doesn't show on the page or on any card. We only send it back to you when you're signed in, so if you ever restore a page as a note, it goes back into the right category. You can publish without signing in, and then the page isn't linked to any account. If you later sign in and, using that page's private token on your device, turn on "Show in stories" or save an update to it, we link the page to your account from then on. It then shows up among your published pages, counts towards your account's page limit, and is taken down if you delete your account. We also give you a private token for each page. It's stored on your device, and we don't keep it in its original form. We only keep a scrambled version, just enough to check that it matches when you send it back to update or unpublish. Updating a published page sends the new content the same way. Unpublishing takes the page down, and if it was running as an ad, the ad stops too. We may keep a copy for about 30 days afterward, in case of an abuse report or takedown request, and then delete it. If the page was reported as child sexual abuse material, we keep the copy for 18 months instead (see "Reporting a published page"). The page's own record is kept for the same time and then deleted. It holds the address, a scrambled form of the private token, the title, description, tags and category, and, if the page was linked to an account, that account's Google account ID. That's why it stays even after the account itself is deleted. If we remove a page because of a takedown request or abuse report, its address is reserved permanently. To keep that reservation in place, we keep a small record for as long as the address stays reserved. It holds the address, a scrambled form of the private token, the title, description, tags and category, and, if the page was linked to an account, that account's Google account ID. This record stays even after the copy or the account is deleted, because deleting it would lift the reservation. Publishing also briefly counts requests from your IP address to limit spam. That count is only needed briefly. We then delete it, so it's gone within a day, and it isn't linked to your account or the page. Separately, to stop spam, we also count how often you like, comment, subscribe, mark stories as seen, add an invite code, change your privacy choices, send a text box message as yourself, invite or manage editors, or back up. That count is linked to your account. We only need it for a short time. We then delete it, so it's gone within a day.</p>
       <h3>Page space</h3>
@@ -7816,6 +7788,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <p><strong>Anyone can find this page.</strong> The author can turn this off in Teams. When it&rsquo;s off, the page doesn&rsquo;t show up in Stories, in other people&rsquo;s Subscribed feeds, or in the author&rsquo;s list of pages or previous and next pages. Only the author and the editors can open its link. Everyone else just sees a &ldquo;page not found&rdquo; message. We keep the page&rsquo;s address, the author&rsquo;s account and the time they turned it off, so this works. We delete them when the page is unpublished or taken down, or when the account is deleted.</p>
 
       <p><strong>Arrows and page list.</strong> Under a published page that&rsquo;s opened in the app, there are arrows to the author&rsquo;s earlier and later pages, and a button that lists their pages. The author can hide them in Settings. We keep that choice with their account until they turn it back on or the account is deleted.</p>
+      <p><strong>Letting others duplicate your pages.</strong> You can let people make their own copy of your published pages. It&rsquo;s off until you turn on &ldquo;Let others duplicate my pages&rdquo; in Settings. When it&rsquo;s on, a + button shows beside the list button under your pages when they&rsquo;re opened in the app. It goes away while you hide the arrows and list. We keep your choice with your account until you turn it off or the account is deleted. The copy is made on the other person&rsquo;s own device, from your public page, and it becomes a new note of theirs. Your page doesn&rsquo;t change, and we don&rsquo;t keep a list of who made a copy. If they&rsquo;re signed in, the copy syncs like any other note of theirs.</p>
       <h3>Messages (team chat)</h3>
       <p>Every note with a team has its own team chat. It's like a group chat for the author and the editors of that page. You open it from Messages in the bottom bar, and you need to be signed in. The Messages button shows up while you have a Teams note. If you want it there all the time, turn on "Always show Messages button" in Settings.</p>
       <p>In a team chat you can send a text message (up to 2,000 characters), an image, or a voice message (up to 5 minutes). You can reply to a message, and you can add one emoji reaction to it, from a choice of six. When an editor saves a change to a team's page, they can also write a short summary of what they changed (up to 1,000 characters). That's optional. If they write one, it shows up in the chat as a message from them. If they leave it blank, nothing is posted.</p>
@@ -7860,7 +7833,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <h3>Third-party requests &amp; server logs</h3>
       <p>Using the app makes a few requests to other companies, which can see your IP address, like any website you visit. A script library (three.js) is loaded from Cloudflare's cdnjs when the app opens. A published page with a Stripe Buy Button loads Stripe's code when it opens (see Payments). Google's sign-in code is loaded from Google when you sign in. The app sometimes asks Google (gstatic.com) for a tiny blank page, just to check whether you're online. And if you paste a Spotify link using the editor's own tools, the app asks Spotify (open.spotify.com) for that link's embed details. Requests to our servers run on Cloudflare, which handles them and may keep standard request logs (like the time, the address requested, and your IP address) that we can use to run and fix the service. We don't use them for analytics or tracking.</p>
       <h3>Activity counts</h3>
-      <p>We'd like to know roughly how many people use the app, and how many are using it right now, so our servers note when the app is open. While it's open, the app contacts our server when it launches, when you come back to it, and regularly, sending the same device ID described under "Publishing as an ad" above. If you're signed in, this (and any other request you make while signed in) saves only the time your account was last active, on your account. If you're not signed in, the server saves the device ID with the times it was first and last seen (plus the daily log described below), and nothing else. It isn't linked to a name, email address or Google account, and if you later sign in on that device, the signed-out record is deleted. We use these records for private, overall totals (like total, new and currently active users and devices). We also use them to look up an account's last activity when we're running the service. For signed-in accounts, we use them to count recent active days towards ad access and invites (see "Ad access &amp; invites"). They're never shown to other people, shared, or used for advertising. The last-activity record is deleted about 90 days after the last activity (an account's is also deleted with the account). Separately, so usage can be charted across weeks, months and years, the server keeps a minimal daily log. For each day an account or device was active, it holds one entry with just that date and the account or device ID, with no name, email or content. We use these entries for those overall charts and for the active-day counts in "Ad access &amp; invites", and they're removed automatically after 800 days (about 26 months). They aren't removed early when you delete your account or sign in on a device that was signed out. There's no setting to turn this off, because we don't collect anything beyond this. If you clear the app's storage, you get a fresh device ID from then on.</p>
+      <p>We'd like to know roughly how many people use the app, and how many are using it right now, so our servers note when the app is open. While it's open, the app contacts our server when it launches, when you come back to it, and regularly, sending the same device ID described under "Publishing as an ad" above. If you're signed in, this (and any other request you make while signed in) saves only the time your account was last active, on your account. If you're not signed in, the server saves the device ID with the times it was first and last seen (plus the daily log described below), and nothing else. It isn't linked to a name, email address or Google account, and if you later sign in on that device, the signed-out record is deleted. We use these records for private, overall totals (like total, new and currently active users and devices). We also use them to look up an account's last activity when we're running the service. For signed-in accounts, we use them to count recent active days towards ad access and invites (see "Ad access &amp; invites"). They're never shown to other people, shared, or used for advertising. The last-activity record is deleted about 90 days after the last activity (an account's is also deleted with the account). Separately, so usage can be charted across weeks, months and years, the server keeps a minimal daily log. For each day an account or device was active, it holds one entry with just that date and the account or device ID, with no name, email or content. We use these entries for those overall charts, to see how many people come back after they first sign up, and for the active-day counts in "Ad access &amp; invites", and they're removed automatically after 800 days (about 26 months). They aren't removed early when you delete your account or sign in on a device that was signed out. There's no setting to turn this off, because we don't collect anything beyond this. If you clear the app's storage, you get a fresh device ID from then on.</p>
       <h3>Analytics</h3>
       <p>We don't collect usage tracking or crash reports from this app, and we don't track what you do inside it. The only usage figures it keeps are the two uses of the device ID described above: counting an ad's unique viewers (see "Publishing as an ad"), and the activity counts (see "Activity counts").</p>
       <h3>Keeping things safe</h3>
@@ -7931,6 +7904,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
         <li>Turn comments on, hide them, or disable new ones, for a single page or all of your pages at once</li>
         <li>Pick a display name and picture, or stay anonymous</li>
         <li>Open any published note by pasting its link into search</li>
+        <li>Let people duplicate your published pages if you like. It&rsquo;s off until you turn it on.</li>
         <li>Promote a page with <strong>Publish as Ad</strong>. Buy a view package and your page appears full screen before other people&rsquo;s notes.</li>
       </ul>
       <h2>Teams</h2>
@@ -8002,7 +7976,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <button class="lg-find-btn" id="cterms-find-next" type="button" aria-label="Next match" disabled><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4,8 10,14 16,8"/></svg></button>
     </div>
     <div id="cterms-body">
-      <p><em>Effective 16 November 2026</em></p>
+      <p><em>Effective 25 November 2026</em></p>
       <p>Welcome to <strong>Bluebook</strong>! It&rsquo;s published by Essential Software (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;). By using it, you agree to these terms, which are here to keep the app fair and safe for everyone. We've written them in plain language.</p>
       <h3>Who Can Use Bluebook</h3>
       <p>You need to be at least 13 to use Bluebook, or older if the rules where you live say so. If you're under 18, please read these terms with a parent or guardian and make sure they're OK with you using the app.</p>
@@ -8015,6 +7989,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <p>Signing in is optional and handled by Google. Keep your Google account secure. Anyone with access to it can access your synced notes, Pro purchase, ad view credits and page space balance through this app. We record when your account was last active, and count active devices, only to run and understand the service; see the Privacy Policy's "Activity counts" section.</p>
       <h3>Published Content</h3>
       <p>A published page is stored on our servers and can be viewed by anyone with the link. You're responsible for what you publish and for having the rights to it. We may remove a published page if it breaks these terms, gets a valid takedown request, or is reported and found to be abusive. A page you publish while signed out isn't linked to an account. If you later sign in and use its private token to show it in stories or save an update, it becomes part of your account. Then it counts towards your account's page limit, and it's taken down if you delete your account. Unpublish it yourself and its address frees up right away for reuse. The one exception is a verified name: it stays yours for 30 days after you unpublish the page (or less, if you ask us to free it sooner), we'll send you alerts before then, and after that it's freed up and the tick goes away (see "Reserved Names &amp; Verified Ticks"). If we remove it instead, for a takedown or abuse report, the address stays permanently reserved and can't be reclaimed or republished. You still own what you publish. By publishing a page, you give us permission to host it and show it to people. You also give us permission to use it to run, build, test and improve Bluebook and our other apps, including by training computer programs (this is called machine learning). You can opt out of that any time, and the Privacy Policy's "Using published pages and comments" section explains how. This permission is free, works anywhere in the world, and covers copying, resizing, reformatting and showing your page as needed, including by companies that help us run Bluebook. It still covers anything we've already done with your page after you unpublish it or delete your account. You promise you have the right to give us this permission.</p>
+      <p>You can choose to let people duplicate your pages. If you turn on &ldquo;Let others duplicate my pages&rdquo; in Settings, people who view your page in the app can make a copy of it for their own use. Your page is still public, so the switch only controls the + button in the app. It doesn&rsquo;t stop people copying a public page in other ways. If you make a copy of someone else&rsquo;s page, it&rsquo;s still their work. Respect their rights: use your copy for yourself, and don&rsquo;t publish, sell or share it as yours unless you have the right to.</p>
       <h3>Page Space</h3>
       <p>A page you publish can be up to 5 MB (megabytes) without anything extra. To publish a bigger page, up to 30 MB, you need page space.</p>
       <p>Page space comes in packs of 25, 50 or 100 MB, bought through Google Play Billing. Every pack adds to your page space balance. You can buy one from Settings before you need it, or when a page is too big to publish.</p>
@@ -8248,7 +8223,8 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
       <div id="pub-web-tab">
         <div id="pub-state-new" class="bkp-panel">
           <p class="bkp-help">Publish this note as a live page anyone can open with a link. Choose an address below using letters, numbers, and dashes.</p>
-          <p id="pub-slug-example" class="bkp-help">E.g. example.com/@untitled-note</p>
+          <!-- [2026-11-25 06:52 | publish-address-preview] the example address names the real publish address (my-site.name); _pubOnSlugInput keeps it in step with NB_PUBLISH_API. -->
+          <p id="pub-slug-example" class="bkp-help">E.g. my-site.name/@untitled-note</p>
           <div id="pub-slug-wrap" class="com-field"><span id="pub-slug-prefix">/@</span><input id="pub-slug-input" placeholder="your-page-name" maxlength="48" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" oninput="_pubOnSlugInput(this.value)"></div>
           <div id="pub-slug-status" class="pub-status"></div>
         </div>
@@ -8453,13 +8429,18 @@ const _NB_NOTE_UI_STATE_SCRIPT = `<script data-noteinfra="1">(function(){
     mount: function(el){ try { el.setAttribute('data-noteinfra','1'); } catch(e){} document.body.appendChild(el); return el; },
     mark: function(el){ try { el.setAttribute('data-noteinfra','1'); } catch(e){} return el; }
   };
+  function _bigSig(s){ // same algorithm as _nbBigSig in the host: lets it tell an over-cap note that is unchanged from one that was edited
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0; }
+    return (h >>> 0).toString(36) + '.' + s.length.toString(36);
+  }
   function _imgHash(s){
     var h = 0;
     for (var i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0; }
     return 'i' + (h >>> 0).toString(36) + s.length.toString(36);
   }
   function snapshot(){
-    var st={}; var images={};
+    var st={}; var images={}; var tooBig=false; var bigSig='';
     if (document.querySelector('.dragging')) return { st: st, images: images };
     try {
       var canvasEl = document.getElementById('cv-canvas');
@@ -8565,9 +8546,9 @@ const _NB_NOTE_UI_STATE_SCRIPT = `<script data-noteinfra="1">(function(){
         // save, making a pick of the default color look like it reverted. Only done alongside st.full, since
         // nbRestoreState only re-applies the saved background when it restores from st.full.
         if (st.pageBg === undefined) { st.pageBg = ''; st.pageBgCustom = ''; }
-      }
+      } else { tooBig = true; bigSig = _bigSig(html); }
     } catch(e) {}
-    return { st: st, images: images };
+    return { st: st, images: images, tooBig: tooBig, bigSig: bigSig };
   }
   var _rt;
   function report(immediate){
@@ -8575,7 +8556,7 @@ const _NB_NOTE_UI_STATE_SCRIPT = `<script data-noteinfra="1">(function(){
     var send=function(){
       if (!window.parent) return;
       var snap = snapshot();
-      window.parent.postMessage({type:'markup-ui-state', noteId: window.__noteId, state:snap.st, images:snap.images}, '*');
+      window.parent.postMessage({type:'markup-ui-state', noteId: window.__noteId, state:snap.st, images:snap.images, tooBig:!!snap.tooBig, bigSig:snap.bigSig || ''}, '*');
     };
     if (immediate) send(); else _rt=setTimeout(send,250);
   }
@@ -15854,6 +15835,22 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
     classicResolveRowOverlap(a);
   }
 
+  // Edge auto-scroll for a dragged block: the scroller is the canvas box when it really scrolls (desktop view), else the page.
+  function dragScroller() {
+    var sc = document.getElementById('cv-canvas-scroll');
+    return (sc && sc.scrollHeight > sc.clientHeight + 1 && getComputedStyle(sc).overflowY !== 'visible') ? sc : null;
+  }
+  function dragScrollPos() { var sc = dragScroller(); return (window.pageYOffset || 0) + (sc ? sc.scrollTop : 0); }
+  // Pixels to scroll per frame for a pointer at clientY: 0 in the middle, up to DRAG_SCROLL_MAX inside DRAG_SCROLL_ZONE of the top/bottom
+  // edge of what is visible, and the full speed when it is held past the edge. Negative = up.
+  var DRAG_SCROLL_ZONE = 72, DRAG_SCROLL_MAX = 20;
+  function dragEdgeStep(y) {
+    var sc = dragScroller(), top = 0, bottom = window.innerHeight || document.documentElement.clientHeight;
+    if (sc) { var r = sc.getBoundingClientRect(); top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom); }
+    if (y < top + DRAG_SCROLL_ZONE) return -Math.min(DRAG_SCROLL_MAX, Math.max(1, Math.ceil(DRAG_SCROLL_MAX * (top + DRAG_SCROLL_ZONE - y) / DRAG_SCROLL_ZONE)));
+    if (y > bottom - DRAG_SCROLL_ZONE) return Math.min(DRAG_SCROLL_MAX, Math.max(1, Math.ceil(DRAG_SCROLL_MAX * (y - (bottom - DRAG_SCROLL_ZONE)) / DRAG_SCROLL_ZONE)));
+    return 0;
+  }
   function wireDrag(block) {
     var handle = block.querySelector('.blk-handle');
     if (!handle) return;
@@ -15863,6 +15860,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
     var classicSwapTarget = null;   // Pending swap partner block, set instead of classicSlot when hovering right on top of one
     var dragHistBefore = null;   // this block's outerHTML at gesture start, for undo
     var swapCandidate = null, swapSince = 0, swapTimer = 0, lastMoveEvt = null;   // swap dwell (see CLASSIC_SWAP_DWELL)
+    var dragScrollY0 = 0, autoRaf = 0;   // scroll position at gesture start, and the auto-scroll frame loop (see autoScrollTick)
 
     handle.addEventListener('pointerdown', function(e) {
       e.preventDefault();
@@ -15880,6 +15878,10 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
       }
       block.classList.add('dragging');
       block.style.transition = 'none';
+      dragScrollY0 = dragScrollPos();
+      lastMoveEvt = e;
+      if (autoRaf) cancelAnimationFrame(autoRaf);
+      autoRaf = requestAnimationFrame(autoScrollTick);
       if (pinY0) {
         startPointerY = e.clientY - pinY0 * (typeof activeZoom === 'function' ? activeZoom() : pinZ);
         block.style.transform = 'translate(0px, ' + pinY0 + 'px)';
@@ -15907,7 +15909,8 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
       
       // Free-float the block glued to the pointer
       var deltaX = (e.clientX - startPointerX) / (typeof activeZoom === 'function' ? activeZoom() : 1);
-      var deltaY = (e.clientY - startPointerY) / (typeof activeZoom === 'function' ? activeZoom() : 1);
+      // The page may have scrolled since the grab (auto-scroll, or a wheel): the block sits in the scrolled content, so add that back to keep it under the pointer.
+      var deltaY = (e.clientY - startPointerY + (dragScrollPos() - dragScrollY0)) / (typeof activeZoom === 'function' ? activeZoom() : 1);
       block.style.transform = 'translate(' + deltaX + 'px, ' + deltaY + 'px)';
 
       // Hit-test using the dragged block's own current position (its
@@ -15979,11 +15982,29 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
         showClassicGuides(plan.guides.concat(planY.guides));
       }
     }
+    // Held near the top or bottom edge, keep scrolling that way even when the pointer is still (no pointermove comes then), and re-run the
+    // move so the block follows the scroll and its drop slot is recomputed under it.
+    function autoScrollTick() {
+      autoRaf = 0;
+      if (!block.classList.contains('dragging')) return;
+      var step = lastMoveEvt ? dragEdgeStep(lastMoveEvt.clientY) : 0;
+      if (step) {
+        var before = dragScrollPos(), sc = dragScroller();
+        if (sc) {
+          var st0 = sc.scrollTop;
+          sc.scrollTo({ top: st0 + step, behavior: 'instant' });
+          if (sc.scrollTop === st0) window.scrollTo({ top: (window.pageYOffset || 0) + step, behavior: 'instant' }); // the box is at its end: the page takes over
+        } else window.scrollTo({ top: (window.pageYOffset || 0) + step, behavior: 'instant' });
+        if (dragScrollPos() !== before && lastMoveEvt) onDragMove(lastMoveEvt);
+      }
+      autoRaf = requestAnimationFrame(autoScrollTick);
+    }
     handle.addEventListener('pointermove', onDragMove);
 
     function endDrag(e) {
       if (!block.classList.contains('dragging')) return;
       clearTimeout(swapTimer);
+      if (autoRaf) { cancelAnimationFrame(autoRaf); autoRaf = 0; }
       block.classList.remove('dragging');
       // zIndex is intentionally left as-is (not reset to ''): the block
       // was just touched, so bringClassicBlockToFront() above should
@@ -19266,7 +19287,14 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
-        web-account-bars   in a browser the Account screen counts as the splash: its colour or photo runs under the phone's bottom nav area too (this app)
+        library-nudges     reminders in a card at the top of Library > All: backup, storage, unpublished changes, settings left in an unusual state, free note limit, feature tips, and account news from the server (alerts, messages, notes not synced, subscriber and like growth, ad packages, Stripe setup, unspent views, invites), with a Reminders switch in Settings > Library (app only, no Worker change)
+        page-duplicate-legal Privacy, Terms, Technical notes and the welcome page now cover the Let others duplicate my pages switch; Terms date 25 November 2026 (app, Worker LEGAL_DEFAULTS, TECH_NOTES, WELCOME_HTML, demo)
+        placeholder-fit    admin field hints that were cut off at the end: the Reason hint is shorter and a long hint ends in an ellipsis (worker index.js and admin demo)
+        scroll-anchor      admin pages that scroll a card or section into view stop just below the sticky top bar, not under it (worker index.js and admin demo)
+        toast-case         admin toasts no longer start with a raw value (the copy-failed author ID fallback, the report reason bar), because the toast capitalises its first letter (worker index.js and admin demo)
+        admin-long-lists   long lists in the admin (Sign-up weeks, User directory, All metrics, Admins, and runs of rows in the Lookup owner card) scroll inside a capped box instead of running down the page (worker index.js and admin demo)
+        admin-version      the admin Tools version label (v25.11.2026-release), kept the same in the Worker and the admin demo (worker index.js)
+        publish-address-preview the Publish sheet's example address names my-site.name instead of example.com; the admin version label moved to v25.11.2026-release (Worker index.js and admin demo)
         web-splash-flat    in a browser (not the Android app) the splash photo shows in Light only; Night and Pink keep the flat colour splash (this app)
         eye-care           an Eye care switch in Settings > Appearance, after Pause moving background: a warm tint over the whole app (this app)
         story-strip-repaint the stories strip is not rewritten when nothing in it changed, so a story avatar loads once on open or restore instead of twice (this app)
@@ -19324,37 +19352,176 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
 
-     SESSION 2026-11-24 14:52 | topics: web-account-bars | AI: Claude (app) | Account screen fills the bottom nav area in a browser
+     SESSION 2026-11-25 10:25 | topics: library-nudges | AI: Claude (app) | Spacing
        Start state
-         webapp.html after web-splash-bottom (51939 lines). The launch splash painted the page edge and theme-color, but opening the Account screen later (header icon, signed out) did not, so the browser's bottom nav area showed the page background and the screen could stop short of it.
+         The 10:08 session (36 reminders). A dismissal held back everything for 1 day and every reminder could return after 7.
        Work done
-         _nbWebAcctBars(on): in a browser only (html.nb-web), opening the Account screen sets html.nb-acct-bars (splash photo in Light, flat colour in Night and Pink, same colours as the splash) and the splash theme-color; closing restores the theme's bar colour. The screen is height auto in a browser so it fills the live viewport. applyTheme keeps it while the screen is open. [2026-11-24 14:52 | web-account-bars]
+         Reminders are spaced. Urgent ones (storage, notes not synced, delete confirmation off, Auto-sync off, a backup 60 or more days overdue) ignore the quiet period and return after 2 days. All others: after any Not now or button tap nothing but urgent shows for 3 days, nothing but urgent shows for the first 2 days after first run, and the same reminder returns after 7 days, then 14, then 30 (counted per reminder in nb_nudges_v1.dcount). A button tap now counts as handled, same as Not now. [[2026-11-25 10:25 | library-nudges]]
        Improvements
          Nothing beyond the task.
        Fixed
-         Nothing else.
-       Found
          Nothing.
+       Found
+         Existing installs start their 2 quiet days when this version first draws a card, because first run is stamped then.
        Important details
-         The Android app is untouched (nb-web is never set there). Rejected: pinning the screen to --splash-h in a browser, which is what left the strip.
+         The wait grows with the count of the reminder, not with the number inside its id, so "3 new alerts" then "4 new alerts" is still one reminder for backing off, but the new number does reappear once the quiet days are over.
+         Constants: NB_NUDGE_BACKOFF, NB_NUDGE_URGENT_REPEAT_DAYS, NB_NUDGE_GAP_DAYS, NB_NUDGE_NEWBIE_DAYS, NB_NUDGE_URGENT_BACKUP_DAYS.
+       Removed
+         NB_NUDGE_REPEAT_DAYS.
+       Untested
+         Not run on a phone. Run in a headless browser only: the quiet period, urgent bypass and backoff were checked with a faked clock.
+       Depends on
+         Nothing in the Worker or admin demo.
+
+     SESSION 2026-11-25 10:08 | topics: library-nudges | AI: Claude (app) | Payments and unsynced reminders
+       Start state
+         The 09:52 session (12 server reminders). Asked for everything the server allows; this adds the ones that session left out.
+       Work done
+         Two more reminders (36 in all). Finish your Stripe setup: a published page has a payment block (data-py-m="card") and POST /pay/account says connected but not ready; the button opens Stripe the same way the page editor's Payments panel does (POST /pay/connect). Notes not on your account: signed in, notes edited after the last push (syncBaseAt) or never pushed, untouched for 10 minutes, so Auto-sync is off, paused or failing; the button is Sync now. [[2026-11-25 10:08 | library-nudges]]
+         /pay/account is only asked when a published note has a payment block, in the same request batch as the other two.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Left out, and why: connecting Stripe for someone with no account (the Worker answers 503 until payments are switched on, so the button would only fail); poll votes and payment totals (one owner-token request per poll or block, no summary route); new comments per page (Alerts already carries them); Teams invitations (the Worker has only one invitation at a time, they arrive as alerts).
+       Important details
+         The unsynced test can say yes for a note created while signed out until its first push tags it. Notes from another account on the device are skipped.
        Removed
          Nothing.
        Untested
-         Not run in a phone browser. Check in Chrome on Android: signed out, tap the header Account icon in Light, Night and Pink, and the bottom nav area matches the screen; Back restores it.
+         Not run against the live Worker or Stripe. Snapshot and notes were filled by hand to draw the cards.
        Depends on
-         This file only.
-       Follow-up 2026-11-24 15:05
-         Report: in Light the bottom nav area was dark, not the photo. The bar colour is now measured from the bottom edge of the photo showing (dim applied) instead of a fixed near-black. A browser bar can only be one flat colour, so the photo itself cannot be drawn there; the page edge still carries the photo. Untested on a phone.
-       Follow-up 2026-11-24 15:20
-         Eye care: the tint element is fixed, so it could not tint the strip under the page. The page edge now carries the tint as its own layer (splash look and normal page), the edge colour is blended, and switching Eye care with the Account screen open keeps it. Untested on a phone.
-       Follow-up 2026-11-24 15:35
-         Eye care in the normal app, as soon as possible: a small script right after the data-splash one sets html.nb-eye-care, adds the tint element and a two-rule style before the big style block is parsed, so the tinted page edge (the phone's bottom nav area) and the tint are there from first paint. The browser bar colour (theme-color) was already tinted by the boot script and applyTheme. Untested on a phone.
-       Follow-up 2026-11-24 15:16
-         Eye care in the Android app, not only the Account screen / sign-in bottom nav, and as early as possible: (1) the first head script now also paints the native status and navigation bars with the tinted page colour (NbBars.setBg / setIcons, same blend and colours as _nbEyeBlend / _nbSyncBars) instead of waiting for load; (2) _nbSyncBars' paint is now window._nbBarsDo, and _nbEndLaunchBars and the splash exit run it before the web view stops being full-bleed, so no frame shows an untinted bar. Only active with Eye care on; no change when off. Untested on a phone.
+         POST /pay/account, POST /pay/connect (both already used by the app). Nothing new in the Worker or admin demo.
+
+     SESSION 2026-11-25 09:52 | topics: library-nudges | AI: Claude (app) | Server reminders
+       Start state
+         webapp-18-2-1-1-1.html with the 09:32 session (22 local reminders from a table and an ordered list).
+       Work done
+         12 reminders that need the account, added to the same card and the same one-at-a-time rule (34 in all). Social, after the safety reminders: new alerts, unread team messages, subscribers and likes gained since last acknowledged. Ad news, after the risky settings: packages paused after a strike, new package unlocked. Tips, after the other settings: unread in Subscribed, close to the next package (an unmet requirement at 60% or more), unspent ad views, ads need more notes behind them, add a friend's invite code (first 14 days), invite a friend (3 or more own notes, none invited), photos too large to back up. [[2026-11-25 09:52 | library-nudges]]
+         _nbNudgeSrvLoad: GET /ads/mine and GET /account/subscriber-count together, at most every 5 minutes (1 minute after a failure), only while a card could show and online. Also nudges the alert, Subscribed and message counts to refresh. Alerts, messages, Subscribed and photo counts are read from what the app already keeps.
+         Baselines in nb_nudges_v1 under srv[account sub]: { tier, subs, likes }. First sight of an account only records them, so nothing is new until something changes; a drop moves the baseline down. Growth and unlocked-package reminders move it up when the person taps the button or Not now (new item.ack). Count reminders carry the number in their id, so a new number is a new reminder even inside the 7-day repeat gap.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         The Worker has no list of unanswered comments or a Teams invitations count the app can read cheaply, and /pay/* and /poll/* are per page, so none of those became reminders.
+       Important details
+         Rejected: a growth reminder on first sign-in (there is no baseline yet), and a Worker change. Every call is a route the app already uses with the same session token.
+         The close-to-a-package test reads standing.tiers[].reqs[] need, have, label from /ads/mine as the Publish as Ad sheet does; if a Worker ever drops have, that reminder stops quietly.
+       Removed
+         Nothing.
+       Untested
+         Not run against the live Worker or on a phone: the snapshot was filled by hand in a headless browser to draw each card. Check once signed in: the first card after sign-in shows no growth, then likes or a subscriber gained elsewhere show it, and Not now clears it.
+       Depends on
+         GET /ads/mine (standing, creditBalance), GET /account/subscriber-count (count, likes), GET /alerts/unread, GET /teams/chats, the Subscribed count. Nothing new in the Worker or admin demo. Privacy and Terms are unchanged: no new data is sent.
+
+     SESSION 2026-11-25 09:32 | topics: library-nudges | AI: Claude (app) | More Library reminders
+       Start state
+         webapp-18-2-1-1.html with the first library-nudges session (7 reminders, one card above the notes in Library > All, Reminders switch, backup time kept in nb_nudges_v1).
+       Work done
+         Reminders rebuilt as one ordered list. New: storage getting full (saved text on the device over about 3.5 million characters, checked at most every 5 minutes), delete confirmation off, Auto-sync set to Manual only (signed in), Media icon hidden, Library counts hidden, Media counts hidden, email hidden (signed in), Image previews off, Stories strip off, Media swipe off. Tips: publish a first note (2 or more notes of your own, none published), add a page to your story (signed in, none in a story), Media (a note has a YouTube, Spotify or Streamable link and Media has never been opened), favourites (8 or more notes, none hearted), categories (6 or more notes, none with a category). [[2026-11-25 09:32 | library-nudges]]
+         Settings reminders now come from the table NB_NUDGE_SETTINGS (key, unusual value, words, value put back). Each one counts once it has been unusual for 1 day, and the button puts it back and redraws what it changes. Tips with no action show a single Got it button.
+         Media open() now calls _nbNudgeSeen('media') so the Media tip stops whichever way Media is opened. [[2026-11-25 09:32 | library-nudges]]
+         Order: backup, storage, unpublished changes, delete confirmation and Auto-sync, free note limit, the other settings, then the tips. Demo notes (ids starting n_demo) are not offered for Publish a note.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Auto-sync Manual only also stops the automatic backup to the account (its own Settings text says so), which is why it is in the risky group.
+       Important details
+         The storage test counts localStorage only. Images live in IndexedDB, so a photo-heavy note does not move it. The limit varies by phone, so 3.5 million characters is a guess, kept in NB_NUDGE_STORAGE_CHARS. Rejected: navigator.storage.estimate(), which is asynchronous and would need a second render.
+         Rejected as reminders: Welcome tips off, Glass mode off, Pause moving background, Floating page bar, Always show Messages, theme and Open on. Each is a taste, not something left on by mistake.
+         The Media test is a link match on note content (YouTube, Spotify, Streamable), not the scanner, so it can say yes for a link Media then skips.
+       Removed
+         The two hard-coded Eye care and Reduce motion branches, now rows in the table.
+       Untested
+         Not run in a browser or on a phone. Check: each settings reminder's button in Light, Night and Pink, the Got it card, Open Media, Add to story, Publish a note, and that Auto-sync Turn on restarts the sync timer. Check the storage figure on a phone with many notes.
+       Depends on
+         Nothing in the Worker or admin demo. Privacy and Terms are unchanged: the record stays on the device and nothing is sent.
+
+     SESSION 2026-11-25 09:25 | topics: library-nudges | AI: Claude (app) | Local reminders in the Library
+       Start state
+         webapp-18-2-1-1.html. The Library had no reminders: alerts are sent from the Worker and need sign-in. Backups kept no time, so the app could not tell when the last one was.
+       Work done
+         One reminder card above the notes in Library > All, hidden while searching and in every other category. It is a .guide-card (so Light, Night, Pink and Glass already style it) with the unread alert tint and ring, a primary button and Not now. [[2026-11-25 09:25 | library-nudges]]
+         Reminders, in order: backup (none in 30 days, or never and the oldest note is 30 days old), unpublished changes on your own pages, near or at the free note limit, Eye care left on, Reduce motion left on (only when set on by hand, not when it follows the phone), app lock off with 3 or more notes, signed out with 3 or more notes. Only the first that applies shows.
+         Pacing: Not now hides that reminder for 7 days and all reminders for 1 day. A setting must have been on for 1 day before it counts as left on. A backup done from the Backup sheet (saved, shared or downloaded, not a dismissed share sheet) resets the 30 days.
+         Settings > Library: new Reminders switch (nudges, on by default). _nbStRaw and _nbStPut added beside _nbSt. State is in localStorage nb_nudges_v1 on the device only.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Backups kept no time before this session, so everyone starts from their oldest note's date.
+       Important details
+         Unpublished changes uses the same test as the Publish sheet's Save changes button (hash of nbBuildStaticNoteHtml against publishedContentHash), worked out once per note version and at most 8 notes per render. Pages with no stored hash (restored pages) and team notes are skipped. Rejected: comparing updatedAt alone, because switches such as Show in stories also move it.
+         Rejected: showing reminders in Alerts. Those come from the Worker and need sign-in, and a reminder must work signed out.
+       Removed
+         Nothing.
+       Untested
+         Not run in a browser or on a phone. Check in Light, Night and Pink, with Glass on and off: the card tint, the button colours, Not now. Check Back up now on the Android build, Update page, See Pro, Turn off for both settings, and that Reminders off hides the card.
+       Depends on
+         Nothing in the Worker or admin demo. Privacy and Terms are unchanged: the record stays on the device and nothing is sent. TECH_NOTES does not list on-device keys, so no change there.
+
+     SESSION 2026-11-25 08:43 | topics: page-duplicate-legal | AI: Claude (app) | Legal text for the duplicate switch
+       Start state
+         webapp-18-2-1.html, index-2-2-1-1.js (Worker) and admin-demo-2-1-1-1.html. The Let others duplicate my pages switch, /account/page-dup and the + button were in the code, but Privacy, Terms, TECH_NOTES and the welcome page did not mention them. Terms effective 16 November 2026, Privacy 25 November 2026.
+       Work done
+         Privacy: new paragraph Letting others duplicate your pages, after Arrows and page list: off until turned on, the + beside the list button, kept with the account until turned off or the account is deleted, the copy made on the other person's device from the public page, no record of who copied, + hidden while arrows and list are hidden. Same words in the app (privacy-body), Worker LEGAL_DEFAULTS and the demo. Later pass: the line now says we do not keep a list of who made a copy (handleServe only reads the page, no write or count) and that a signed-in person's copy syncs like any other note of theirs. [08:43 | page-duplicate-legal]
+         Terms: new paragraph after the Published Content one: turning the switch on lets viewers in the app duplicate the page for their own use; it only controls the + and does not stop other copying of a public page; people who copy must respect the author's rights. Effective line moved from 16 to 25 November 2026 in all three. [08:43 | page-duplicate-legal]
+         TECH_NOTES: new item in Page arrows and list under a page: /account/page-dup, key pagedup-on:<sub>, dup in the /author-nav answer (left out when arrows are hidden), nb-nav-dup, copy built on the device, and what the public text says. [08:43 | page-duplicate-legal]
+         Welcome page (WELCOME_HTML): a duplicate sentence was added under Share and grow, then removed at the author's request; it reads as before. /legal reads LEGAL_DEFAULTS, so it follows. [08:43 | page-duplicate-legal]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Duplicating a page skipped the free note limit. _nbStoryNavDup now opens the paywall (lifted above the viewer with #paywall-overlay.over-viewer, removed in closePaywallDialog) when nbAtFreeNoteLimit() is true. The New canvas dialog now adds: It's still the author's work, so please respect their rights.
+       Found
+         The Terms date was held at 16 November on purpose in the publish-address-preview session; it is moved now because the Terms text changed.
+       Important details
+         Verified in code: the switch name, default off (no key when off), key deleted on account deletion, rate limit displayPrefs, dup read only on the not-hidden path of /author-nav, copy built by _nbDuplicatePage from the public page with no Worker route for it. No numbers were added. Privacy, Terms (app) and LEGAL_DEFAULTS (Worker, demo) diffed after normalising the quote escapes: identical.
+       Removed
+         The toast Couldn't load your invitation setting (shown offline when Settings opened). Instead the Invitations to edit row is dimmed (st-off, the same look as the glass-only switches) with no chip pressed until the setting loads; a failed load is logged and retried on reconnect. Settings rows take an optional off().
+         Eye care tint softer: a flat orange layer at 16% turned dark colours grey-brown (screenshot, Night). It is now a multiply tint, rgb(255,238,215), which keeps darks dark and warms only light colours; the fallback where mix-blend-mode is unsupported is the flat layer at 8%. [eye-care-softer]
+         About (in-app), Share and grow: one line, Let people duplicate your published pages if you like. It's off until you turn it on.
+       Untested
+         Not run in a browser or on Cloudflare. Not checked: a version published from the admin Legal editor overrides LEGAL_DEFAULTS, so publish the same two paragraphs and the Terms date there. The separate public index.html (same text) was not in the upload; the paragraphs are in legal-paste.html for it and for the admin Legal editor. The paywall over the viewer was not seen on a device.
+       Depends on
+         Worker LEGAL_DEFAULTS, TECH_NOTES and WELCOME_HTML; the app privacy-body and cterms-body; the admin demo legal text.
+
+     SESSION 2026-11-25 06:52 | topics: publish-address-preview | AI: Claude (app) | Publish address example, Terms effective date
+       Start state
+         webapp.html after the web-splash-flat change (51933 lines), index-2.js (Worker) and admin-demo-2.html. Admin Tools showed v17.11.2026-release in both Worker and demo. The Publish to Web sheet showed "E.g. example.com/@untitled-note", both in the markup and where _pubOnSlugInput rewrites it as the person types. Privacy and Terms read the same in all three files; Effective dates Privacy 25 November 2026, Terms 16 November 2026 (left as they were).
+       Work done
+         Publish sheet: the example address now names the real publish address. Markup says my-site.name; _pubOnSlugInput builds the host from NB_PUBLISH_API, so it follows that constant. [2026-11-25 06:52 | publish-address-preview]
+         Admin Tools version label v17.11.2026-release changed to v25.11.2026-release in the Worker and the admin demo. [2026-11-25 06:57 | admin-version]
+         Admin Overview: Sign-up weeks rows and the User directory list (#ovlist) each sit in a box capped at 55% of the screen height (420 px at most) that scrolls on its own, so the next section stays in reach. New CSS class capbox in the Worker's admin page and the admin demo. [2026-11-25 06:58 | admin-long-lists]
+         Same box for All metrics (#trrows), the Admins list (#admlist) and, through a new capRuns helper, every run of 6 or more rows in the Lookup owner card (referrals, strikes, view ledger, page space, alerts sent, live pages). The Directory box keeps its scroll position when the list is redrawn. [2026-11-25 07:00 | admin-long-lists]
+         Admin toasts: the toast helper msg() capitalises the first letter, which changed an author ID that starts with a letter (shown when the clipboard is not available, from a User directory tile and from the author ID line in Lookup). Both now read 'Author ID: <id>' like the success toast. The report reason bar toast used the raw key ('Csam: 3'); it now uses the same label as the filter keys ('CSAM: 3'). A note above msg() says not to pass it a raw value first. [2026-11-25 07:06 | toast-case]
+         Admin scroll anchoring: the sticky top bar hid the top of whatever scrollIntoView brought up (owner card in Lookup, the trends card when a metric row is tapped, a focused ad, the Reports and Lookup result boxes). html now has scroll-padding-top equal to the bar (top inset + 56 px + 1 px line) plus 12 px, so the top of the target sits just under the bar. One CSS rule, the same in the Worker's admin page and the admin demo. [2026-11-25 07:12 | scroll-anchor]
+         Admin field hints: the Reason hint (REASON_F) was cut off at the end on a phone; it now reads 'e.g. spam, impersonation'. The Audit filter hint is 'Slug, detail or author ID' (it sat next to the search icon and was just as tight). Fields also end a too-long hint or value in an ellipsis. [2026-11-25 07:17 | placeholder-fit]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The example.com placeholder in the Publish sheet.
+       Found
+         The bar height (57 px with the line) is written into the rule; if the bar's height changes the rule must change with it. The scrollIntoView with block center (the alert field flag) is not affected.
+        Left page-scrolled on purpose: the main feeds of Reports, Ads and Audit (nothing follows them but Load more, and their day groups and quiet refresh would fight a second scroll), Reports by reason (five rows), and the recipient and reserved-address lines (a single button that opens a sheet).
+         A comment near line 43911 still uses example.com/@my-note as an example of a pasted link. It is a comment only, not changed.
+       Important details
+         "Release version date" was first read as the Privacy and Terms Effective line and Terms was moved to 25 November; that was wrong, so it was put back to 16 November. The real target is the admin version label.
+       Removed
+         Nothing.
+       Untested
+         Not run in a browser. In admin Overview: Sign-up weeks and Directory should scroll in a box, and Load more still works under the Directory box. Earlier stamp times of 07:05 on the version label were wrong and are now 06:57. Open Publish to Web: the line should read E.g. my-site.name/@untitled-note, and follow the box as you type.
+       Depends on
+         The version label must read the same in the Worker and the admin demo. Privacy and Terms compared across app, Worker and admin demo (indent stripped): identical, 67680 and 33869 characters, before and after. If a Terms version was published from the admin Legal editor, people see that one instead and its date stays what it was. TECH_NOTES not touched (no change to what is collected or kept).
        Final state
-         html.nb-acct-bars, --nb-sbars, window._nbWebAcctBars, window._nbBarsDo.
+         The Publish sheet names my-site.name; admin version label v25.11.2026-release in Worker and demo.
        Next
-         None.
+         Nothing.
 
      SESSION 2026-11-24 13:59 | topics: web-splash-flat | AI: Claude (app) | Web mode: splash photo only in Light
        Start state
@@ -20550,6 +20717,32 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
 
      OLDER SESSIONS
         (none recorded before 2026-10-31)
+     ===================================================================== */
+
+  /* =====================================================================
+     SESSION 2026-11-25 ??:?? | topics: nav-bar-fill, launch-bars, legal-purchases | AI: Claude (app) | Bottom nav area colour, splash infill kept through the launch sign-in, purchase wording
+       Start state
+         webapp-8.html. In the web view the area behind the phone's bottom nav was black in Light (classic), and the splash infill ended as soon as the splash faded, while the launch sign-in screen was still up.
+       Work done
+         1. Base html rules now match what glass mode already sets: Light #ffffff (was #000000), html.night #080808 (was #111111), html.pink #fff8fb (was #c8365e). The boot style still paints html in the splash colour until the splash ends. [2026-11-24 | nav-bar-fill]
+         2. hideSplash keeps the boot html background and the full-screen bottom area on a fresh launch (the sign-in screen follows) and ends them in closeAccountScreen through _nbEndLaunchBars. A resume ends them at once, as before. _nbSyncBars skips while the splash or that screen is up and runs again at the end. [2026-11-24 | launch-bars]
+         3. Privacy Policy (privacy-body) now says we keep a note of a Pro purchase and a short note for every purchase (date, price, kind of money), that refunds are marked, that the notes go with the account (not a purchase made before signing in), that the daily log also shows how many people come back, and the deletion list names purchase notes. Effective date 25 November 2026. The Terms are unchanged. [2026-11-25 | legal-purchases]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The black bar area in Light (classic); the bottom area switching early under the launch sign-in screen.
+       Found
+         Nothing.
+       Important details
+         The html colours are the glass values on purpose, so classic and glass agree. The splash infill is held by a flag (_nbLaunchScreen) rather than a timer, so a slow sign-in screen does not end it early.
+       Removed
+         Nothing.
+       Untested
+         Syntax-checked and checked in a headless browser only. On a phone in the app: open cold in Light, Night and Pink in classic and glass, look at the bottom area through the splash and the sign-in screen, then close the sign-in screen and check it takes the page colour. The Privacy Policy wording was diffed against the Worker and the admin demo (same words); the live text only changes for people once the same words are published from the admin Legal editor if a version was published there before.
+       Depends on
+         Worker LEGAL_DEFAULTS and the admin demo LG_BUILTIN carry the same Privacy Policy words. The Worker now keeps a purchases table (see its Technical notes) and deletes it with the account.
+       Final state
+         Light classic shows white behind the bottom nav; the splash colour or picture runs under the bottom area until the launch sign-in screen is closed; the Privacy Policy matches what the Worker keeps.
      ===================================================================== */
   function dzGet(block, k, def) { var v = block.dataset[k]; return (v === undefined || v === '') ? def : v; }
 
@@ -30037,6 +30230,9 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
         var sel = window.getSelection();
         if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
         var range = sel.getRangeAt(0);
+        // Typing since the last undo entry (new lines, say) is its own step. Left uncommitted it was folded into this action's entry,
+        // so undoing an alignment or other format also removed the lines typed before it.
+        if (textHistBlock) { hcCommitBlock(textHistBlock, textHistBefore); textHistBefore = hcBeginBlock(textHistBlock); }
         switch (btn.dataset.fmt) {
           case 'bold': document.execCommand('bold'); break;
           case 'italic': document.execCommand('italic'); break;
@@ -30503,24 +30699,36 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
     requestAnimationFrame(reveal); // the reflow can still be settling (images, wrapped text), so check once more after it
   }
 
+  // A text edit only commits on blur, so typing still in progress is not in the history yet. Undo/redo replaces whole blocks with their saved markup,
+  // which wiped that typing out (and it never got an entry). Commit it first so it is a normal step that undo takes back on its own.
+  function histFlushText() {
+    if (typeof textHistBlock === 'undefined' || !textHistBlock || !textHistBlock.isConnected) return;
+    hcCommitBlock(textHistBlock, textHistBefore);
+    textHistBefore = hcBeginBlock(textHistBlock);
+  }
+  function histDropTextBaseline() { if (typeof textHistBlock !== 'undefined') { textHistBlock = null; textHistBefore = null; } } // the replayed block is a new element; focus starts a fresh baseline
   window.nbUndo = function() {
     if (document.querySelector('.cv-page.cv-preview')) return; // nothing is editable in preview mode
+    histFlushText();
     if (!histPast.length) return;
     var cmd = histPast.pop();
     histApplying = true;
     histApplyCommand(cmd, 'before');
     histApplying = false;
+    histDropTextBaseline();
     histFuture.push(cmd);
     if (histFuture.length > HIST_MAX) histFuture.shift();
     histNotifyParent();
   };
   window.nbRedo = function() {
     if (document.querySelector('.cv-page.cv-preview')) return;
+    histFlushText();
     if (!histFuture.length) return;
     var cmd = histFuture.pop();
     histApplying = true;
     histApplyCommand(cmd, 'after');
     histApplying = false;
+    histDropTextBaseline();
     histPast.push(cmd);
     if (histPast.length > HIST_MAX) histPast.shift();
     histNotifyParent();
@@ -30700,7 +30908,9 @@ const DK = 'nb_theme_v1';
 const NB_THEME_TS_KEY = 'nb_theme_ts_v1';
 function _nbThemeTs() { try { return parseInt(localStorage.getItem(NB_THEME_TS_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
 /* [2026-11-12 | nav-bar-color] Android app only: paint the phone's bottom navigation area in the page background, in every theme and in glass or classic mode. The WebView ignores <meta theme-color>, so the native NbBars bridge (added by the MainActivity patch in codemagic.yaml) does it. No bridge (browser, iOS) means this does nothing. */
-window._nbBarsDo = function () { // [2026-11-24 15:16 | eye-care-app-bars] the paint itself, so the splash / launch exits can run it before the web view shrinks (no frame of an untinted bar); _nbSyncBars runs it next frame as before
+window._nbSyncBars = function () {
+  if (window._nbBarsRaf) cancelAnimationFrame(window._nbBarsRaf);
+  window._nbBarsRaf = requestAnimationFrame(function () {
     try {
       if (!window.NbBars || !document.body) return;
       if (document.getElementById('splash') || window._nbLaunchScreen) return; // [2026-11-24 | launch-bars] splash + launch sign-in own the bottom area; _nbEndLaunchBars / the splash exit re-sync
@@ -30712,26 +30922,15 @@ window._nbBarsDo = function () { // [2026-11-24 15:16 | eye-care-app-bars] the p
       var hex = (m && m.length >= 3 && !(m[3] !== undefined && +m[3] === 0))
         ? '#' + m.slice(0, 3).map(function (n) { return ('0' + Math.round(+n).toString(16)).slice(-2); }).join('')
         : (b.classList.contains('night') ? '#080808' : b.classList.contains('pink') ? '#fff8fb' : '#ffffff');
-      hex = window._nbEyeBlend ? window._nbEyeBlend(hex) : hex; // [2026-11-24 14:31 | eye-care-edge] the native status/navigation bars are painted by NbBars (the page tint can't reach them), so give them the tinted colour
       if (window._nbBarsLast === hex) return;
       window._nbBarsLast = hex;
       NbBars.setBg(hex);
       if (NbBars.setIcons) NbBars.setIcons(((parseInt(hex.substr(1, 2), 16) * 299 + parseInt(hex.substr(3, 2), 16) * 587 + parseInt(hex.substr(5, 2), 16) * 114) / 255000) > 0.5); // dark status/nav icons on a light page, light icons on Night
     } catch (e) {}
-};
-window._nbSyncBars = function () {
-  if (window._nbBarsRaf) cancelAnimationFrame(window._nbBarsRaf);
-  window._nbBarsRaf = requestAnimationFrame(window._nbBarsDo);
+  });
 };
 window.addEventListener('load', function () { window._nbSyncBars(); setTimeout(window._nbSyncBars, 1500); });
 document.addEventListener('visibilitychange', function () { if (!document.hidden) { window._nbBarsLast = null; window._nbSyncBars(); } });
-// [2026-11-24 14:31 | eye-care-edge] The browser's bar colour (theme-color): the page background, with Eye care's warm tint mixed in while it is on.
-window._nbSetThemeColor = function (mode) {
-  const themeColor = mode === 'dark' ? '#080808' : mode === 'pink' ? '#fff8fb' : '#ffffff';
-  let tc = document.querySelector('meta[name="theme-color"]');
-  if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
-  tc.content = window._nbEyeBlend ? window._nbEyeBlend(themeColor) : themeColor;
-};
 function applyTheme(mode) {
   document.body.classList.toggle('night', mode === 'dark');
   document.body.classList.toggle('pink', mode === 'pink');
@@ -30744,8 +30943,10 @@ function applyTheme(mode) {
   if (sun) sun.style.display = mode === 'pink' ? '' : 'none';
   if (blos) blos.style.display = mode === 'dark' ? '' : 'none';
   // [2026-11-19 07:54 | bars-match] changed: the browser's bar colour is the page background, the same colours the Android app paints its status and navigation bars with (--nb-bg: Light #fff, Night #080808, Pink #fff8fb). It was Night #111111 and Pink #c8365e, so the browser showed different bars from the app, and Pink got light icons instead of dark.
-  window._nbSetThemeColor(mode); // [2026-11-24 14:31 | eye-care-edge] changed: the bar colour now goes through one helper that blends Eye care's tint
-  try { if (document.documentElement.classList.contains('nb-acct-bars') && window._nbWebAcctBars) window._nbWebAcctBars(true); } catch (e) {} // [2026-11-24 14:52 | web-account-bars] a theme change while the Account screen is open keeps the splash bars
+  const themeColor = mode === 'dark' ? '#080808' : mode === 'pink' ? '#fff8fb' : '#ffffff';
+  let tc = document.querySelector('meta[name="theme-color"]');
+  if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
+  tc.content = themeColor;
   if (typeof window._nbSyncBars === 'function') window._nbSyncBars();
   if (typeof window._nbStRefresh === 'function') window._nbStRefresh();
 }
@@ -30781,7 +30982,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
   // [2026-11-13 14:27 | pause-bg] changed: Pause moving background is on by default (pauseSweep: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-03 08:38 | floating-nav] [2026-11-04 17:52 | floating-nav] changed: Floating page arrows is on by default (floatPageNav: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-24 13:45 | eye-care] Eye care is off by default (eyeCare: false).
-  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, eyeCare: false, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false };
+  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, eyeCare: false, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false, nudges: true };
   let S = null, lastPoll = 0;
   function load() {
     try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = Object.assign({}, DEF); }
@@ -30791,13 +30992,6 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
     document.body.classList.toggle('nb-reduce-motion', !!window._nbSt('reduceMotion'));
     document.body.classList.toggle('nb-no-tips', !window._nbSt('tips'));
     document.body.classList.toggle('nb-eye-care', !!window._nbSt('eyeCare')); // [2026-11-24 13:45 | eye-care]
-    // [2026-11-24 14:31 | eye-care-edge] the tint element lives under <html>; refresh the browser bar colour and the Android bars so they take the tint too
-    if (window._nbEyeApply) {
-      window._nbEyeApply(!!window._nbSt('eyeCare'));
-      window._nbBarsLast = null;
-      try { window._nbSetThemeColor(document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light'); } catch (e) {}
-      try { if (document.documentElement.classList.contains('nb-acct-bars') && window._nbWebAcctBars) window._nbWebAcctBars(true); } catch (e) {} // [2026-11-24 15:20 | web-account-bars] Eye care switched while the Account screen is open keeps the splash bars, tinted
-    }
     document.body.classList.toggle('nb-no-dashes', !!window._nbSt('hideDashes'));
     document.body.classList.toggle('nb-no-mdcount', !!window._nbSt('hideMdCount'));
     // Glass mode: the glass styling lives in <style data-nb-glass> sheets that stay disabled (media="not all") unless this is on.
@@ -30811,6 +31005,9 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
     if (k === 'reduceMotion' && S.reduceMotion === null) return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     return S[k];
   };
+  // [2026-11-25 09:25 | library-nudges] the raw saved value (Reduce motion is null until the person touches it, then true or false), and a setter that also applies the body classes.
+  window._nbStRaw = function (k) { if (!S) load(); return S[k]; };
+  window._nbStPut = function (k, v) { put(k, v); classes(); };
   // Best practice for masking: keep the first character and the domain (so the account is still recognisable),
   // replace the rest of the name with a fixed run of asterisks so its length isn't revealed. Anything that isn't an email is left alone.
   // _nbMaskedEmail always masks (used for the setting's own preview); _nbMaskEmail only masks while the setting is on.
@@ -30861,7 +31058,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'sw', k: 'eyeCare', l: 'Eye care', s: 'Adds a soft warm tint over the whole app to cut harsh light, handy at night or in the dark. Turn off for true colours.' },
       { t: 'sw', k: 'reduceMotion', l: 'Reduce motion', s: 'Fewer animations and transitions. Starts on if your phone has animations turned off.' },
       // [2026-11-03 08:38 | floating-nav] Reader setting, kept on this phone. Sent to a published page with the arrows message (nb-nav float).
-      { t: 'sw', k: 'floatPageNav', l: 'Floating page arrows', s: 'Show the previous and next arrows and the list button as a see-through bar at the bottom of the page, next to the comments button, instead of under the page. The bar fades away when you stop scrolling.' },
+      { t: 'sw', k: 'floatPageNav', l: 'Floating page bar', s: 'Show the previous and next arrows, the list button and, on pages whose author allows copies, the + duplicate button as a see-through bar at the bottom of the page, next to the comments button, instead of under the page. The bar fades away when you stop scrolling.' },
       { t: 'sw', k: 'hideDashes', l: 'Hide Media sidebar icon', s: 'Hide the sidebar icon at the left of the Library screen\u2019s header, next to the title. Tapping the Library title still opens Media.' }]],
     ['Library', [
       { t: 'chips', k: 'sort', l: 'Sort notes', o: [['default', 'Default'], ['edited', 'Recently edited'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['az', 'A\u2013Z']] },
@@ -30870,6 +31067,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'sw', k: 'stories', l: 'Stories strip', s: 'Show stories above your notes in All.', after: () => _nbSyncStoriesStripVisibility() },
       { t: 'sw', k: 'msgAlways', l: 'Always show Messages button', s: 'Keep the Messages button in the bottom bar all the time. Off shows it only while you have a Teams note.', after: () => nbMsgNavSync() },
       { t: 'sw', k: 'tips', l: 'Welcome tips', s: 'Show the intro carousel in the Library.' },
+      { t: 'sw', k: 'nudges', l: 'Reminders', s: 'Show a short reminder at the top of the Library now and then, such as a backup or a setting left on.', after: () => { try { nbNudgeRender(); } catch (e) {} } },
       { t: 'sw', k: 'hideLibCount', l: 'Hide Library category counts', s: 'Hide the note counts on the Library category pills (All, Favourites, Alerts, Published, Stories, Subscribed, Liked, Teams, Uncategorized and your own categories).', after: () => buildCatBar() },
       { t: 'sw', k: 'hideMdCount', l: 'Hide Media category counts', s: 'Hide the counts on the Media tabs (Audio, Videos, Albums and Playlists).' },
       { t: 'sw', k: 'mediaSwipe', l: 'Swipe from left edge to open Media', s: 'Swipe in from the left edge of the screen, on any screen in the app, to open Media (audio, videos, albums, playlists).' }]],
@@ -30878,7 +31076,9 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       allRule('allShowComments', 'Always show comments', 'Show the comments button on all your published pages now, and on every page you publish from here on. Turns off \u201cHide comments on all pages\u201d.', 'allHideComments'),
       allRule('allHideComments', 'Hide comments on all pages', 'Hide the comments button and comments on all your published pages now, and on every page you publish from here on. Turns off \u201cAlways show comments\u201d.', 'allShowComments'),
       allRule('allDisableComments', 'Disable comments on all pages', 'Visitors can\u2019t add new comments or replies on any of your pages; they see a note that you turned them off. Existing comments stay.'),
-      { t: 'sw', k: 'hidePageNav', show: () => nbIsSignedIn(), l: 'Hide arrows and list under my pages', s: 'Hide the previous and next arrows and the list button under your published pages. They only ever show when a page is opened inside the app, never in a browser.', get: () => _nbPageNavHidden(), toggle: done => _nbPageNavToggle(done) }]],
+      { t: 'sw', k: 'hidePageNav', show: () => nbIsSignedIn(), l: 'Hide arrows and list under my pages', s: 'Hide the previous and next arrows and the list button under your published pages. They only ever show when a page is opened inside the app, never in a browser.', get: () => _nbPageNavHidden(), toggle: done => _nbPageNavToggle(done) },
+      // [2026-11-25 | page-duplicate] Account choice (GET/PUT /account/page-dup), off by default.
+      { t: 'sw', k: 'allowDupPages', show: () => nbIsSignedIn(), l: 'Let others duplicate my pages', s: 'Show a + button beside the list button under your published pages, for you and for everyone who views them in the app. Tapping it opens a copy of the page as a new note of their own; your page isn\u2019t changed. It shares the bar with the arrows, so it stays hidden while \u201cHide arrows and list under my pages\u201d is on.', get: () => _nbPageDupOn(), toggle: done => _nbPageDupToggle(done) }]],
     ['Writing', [
       { t: 'chips', k: 'startOn', l: 'Open Bluebook on', o: [['library', 'Library'], ['write', 'Write'], ['share', 'Share'], ['last', 'Last screen']] },
       { t: 'chips', k: 'resetSource', l: 'Reset to original', s: 'Last saved discards your edits and goes back to the version you last saved. Published copy fetches the live page and replaces the note with it (published notes only; other notes use Last saved).', o: [['saved', 'Last saved'], ['published', 'Published copy']] },
@@ -30887,7 +31087,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'link', l: 'Published pages & comments', show: () => nbIsSignedIn(), s: () => { const v = _nbMlOptGet(); const d = _nbStAcctGet(); if (!d || d.mlOptOut === undefined) return '\u2014'; return v === true ? 'Kept out of app improvements' : v === false ? 'May be used to improve our apps' : 'Not chosen yet'; }, go: () => _nbStMlTileTap() },
       { t: 'chips', k: 'storyAvatar', l: 'Story picture', show: () => nbIsSignedIn(), s: 'Profile picture shows your picture on your stories (the note\u2019s first image if you have no picture). Note image shows the note\u2019s first image (your picture if the note has none). Never my picture keeps your picture off your stories and shows the note\u2019s first image (a letter if the note has none). It does not change how your teammates see your picture in team chats.', o: [['picture', 'Profile picture'], ['note', 'Note image'], ['never', 'Never my picture']], get: () => _nbStoryAvatarGet(), set: v => _nbSetDisplayPref({ storyAvatar: v }) },
       { t: 'chips', k: 'commentAs', l: 'Appear as', show: () => nbIsSignedIn(), s: 'Name & picture shows your display name and profile picture wherever you appear: on your comments, in team chats and team lists, in invitations and alerts, and on text box messages you send as yourself (Anonymous if you have no display name). Anonymous never shows them. This applies to all your comments and chat messages, old and new. Alerts that were already sent do not change.', o: [['profile', 'Name & picture'], ['anonymous', 'Anonymous']], get: () => _nbCommentAsGet(), set: v => _nbSetDisplayPref({ commentAs: v }) },
-      { t: 'chips', k: 'teamInvites', l: 'Invitations to edit', show: () => nbIsSignedIn(), s: 'Everyone lets anyone who has your invite code invite you to edit their note. Nobody blocks all new invitations. You always choose whether to accept.', o: [['all', 'Everyone'], ['none', 'Nobody']], get: () => _nbTeamInvGet(), set: v => _nbTeamInvSet(v) },
+      { t: 'chips', k: 'teamInvites', l: 'Invitations to edit', show: () => nbIsSignedIn(), s: 'Everyone lets anyone who has your invite code invite you to edit their note. Nobody blocks all new invitations. You always choose whether to accept.', o: [['all', 'Everyone'], ['none', 'Nobody']], get: () => _nbTeamInvGet(), off: () => _nbTeamInvAllow === null, set: v => _nbTeamInvSet(v) },
       { t: 'link', l: 'Blocked from inviting you', show: () => nbIsSignedIn() && _nbTeamInvBlocked > 0, s: () => _nbTeamInvBlocked + (_nbTeamInvBlocked === 1 ? ' person' : ' people'), go: () => _nbTeamBlocksOpen() }]],
     ['Security', [
       { t: 'sw', k: 'appLock', get: () => !!(window.nbLock && window.nbLock.enabled()), toggle: (done) => { const L = window.nbLock; if (!L) { done(false); return; } if (L.enabled()) L.disable(done); else L.enable(done); }, l: 'App lock', s: 'Ask for a PIN or password each time the app starts, and when you return after more than 30 seconds away. It stays on this device. If you forget it, answering your recovery question gets you back in.' },
@@ -30927,8 +31127,8 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
     const d = ' data-g="' + g + '" data-r="' + i + '"';
     if (r.t === 'sw') return '<label class="st-row' + (r.needsGlass && !window._nbSt('glassMode') ? ' st-off' : '') + '"' + (r.needsGlass ? ' data-needs-glass="1"' : '') + '><span class="st-txt"><span class="st-l">' + E(r.l) + '</span>' + sub(r) + '</span><span class="nb-switch"><input type="checkbox" class="nb-switch-input"' + d + ((r.get ? r.get() : window._nbSt(r.k)) ? ' checked' : '') + (r.needsGlass && !window._nbSt('glassMode') ? ' disabled' : '') + '><span class="nb-switch-track"><span class="nb-switch-thumb"></span></span></span></label>';
     if (r.t === 'chips') {
-      const cur = String(r.get ? r.get() : window._nbSt(r.k));
-      return '<div class="st-row st-col"><span class="st-txt"><span class="st-l">' + E(r.l) + '</span>' + sub(r) + '</span><div class="st-chips">' + r.o.map(o => '<button type="button" aria-pressed="' + (String(o[0]) === cur) + '" class="st-chip' + (String(o[0]) === cur ? ' on' : '') + '"' + d + ' data-v="' + o[0] + '">' + E(o[1]) + '</button>').join('') + '</div></div>';
+      const cur = String(r.get ? r.get() : window._nbSt(r.k)), off = !!(r.off && r.off());
+      return '<div class="st-row st-col' + (off ? ' st-off' : '') + '"><span class="st-txt"><span class="st-l">' + E(r.l) + '</span>' + sub(r) + '</span><div class="st-chips">' + r.o.map(o => '<button type="button" aria-pressed="' + (String(o[0]) === cur) + '" class="st-chip' + (String(o[0]) === cur ? ' on' : '') + '"' + d + ' data-v="' + o[0] + '"' + (off ? ' disabled' : '') + '>' + E(o[1]) + '</button>').join('') + '</div></div>';
     }
     if (r.t === 'info' || (r.noChev && r.noChev())) return '<div class="st-row" style="cursor:default"><span class="st-txt"><span class="st-l">' + E(r.l) + '</span>' + sub(r) + '</span></div>';
     return '<button type="button" class="st-row st-link' + (r.danger ? ' st-danger' : '') + (r.accent ? ' st-danger st-accent' : '') + '"' + d + '><span class="st-txt"><span class="st-l">' + E(r.l) + '</span>' + sub(r) + '</span>' + (r.danger || r.accent || (r.noChev && r.noChev()) ? '' : CHEV) + '</button>';
@@ -31489,7 +31689,7 @@ function _nbPaywallOk() {
   closePaywallDialog();
 }
 function closePaywallDialog() {
-  document.getElementById('paywall-overlay').classList.remove('open');
+  document.getElementById('paywall-overlay').classList.remove('open', 'over-viewer');
   unlockScroll();
 }
 // Runs the actual Google Play Billing purchase through RevenueCat. Outside
@@ -33875,58 +34075,11 @@ function _nbStartAcctSplash3D() {
 function _nbStopAcctSplash3D() {
   if (_acctSplash3DCtl) { _acctSplash3DCtl.stop(); _acctSplash3DCtl = null; }
 }
-// [2026-11-24 14:52 | web-account-bars] Browser only: the Account screen is the splash, not the app, so while it is open the page edge and the browser's bar colour (theme-color) are the splash's, which carries the splash colour down through the phone's bottom nav area. Closing puts back the page background and the theme's bar colour. The Android app has its own bars (NbBars), so this does nothing there.
-window._nbWebAcctBars = function (on) {
-  try {
-    const de = document.documentElement;
-    if (!de.classList.contains('nb-web')) return;
-    if (on) {
-      const mode = document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light';
-      const col = mode === 'dark' ? '#111111' : mode === 'pink' ? '#c8365e' : (['#141517', '#121315', '#131313'][parseInt(de.getAttribute('data-splash'), 10)] || '#141517');
-      de.style.setProperty('--nb-sbars', col);
-      de.classList.add('nb-acct-bars');
-      if (window._nbEyeBlend) de.style.setProperty('--nb-sbars', window._nbEyeBlend(col)); // [2026-11-24 15:20 | web-account-bars] Eye care tint on the page edge colour
-      let tc = document.querySelector('meta[name="theme-color"]');
-      if (!tc) { tc = document.createElement('meta'); tc.name = 'theme-color'; document.head.appendChild(tc); }
-      tc.content = window._nbEyeBlend ? window._nbEyeBlend(col) : col;
-      // [2026-11-24 15:05 | web-account-bars] changed: in Light the bar colour was a fixed near-black that did not match the photo, so the bottom nav area read as a dark band. It is now measured from the bottom edge of the photo actually showing, with the splash dim applied (bottom dim is 60% black), so the bar carries on from the picture.
-      if (mode === 'light') {
-        const m = (getComputedStyle(de).getPropertyValue('--splash-img') || '').match(/url\(\s*["']?([^"')]+)["']?\s*\)/);
-        if (m) {
-          const img = new Image();
-          img.onload = function () {
-            try {
-              if (!de.classList.contains('nb-acct-bars')) return;
-              const c = document.createElement('canvas'); c.width = 16; c.height = 2;
-              const g = c.getContext('2d');
-              const h = Math.max(1, Math.round(img.naturalHeight * 0.04));
-              g.drawImage(img, 0, img.naturalHeight - h, img.naturalWidth, h, 0, 0, 16, 2);
-              const d = g.getImageData(0, 0, 16, 2).data;
-              let r = 0, gr = 0, b = 0, n = d.length / 4;
-              for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
-              const hx = v => ('0' + Math.round(v / n * 0.4).toString(16)).slice(-2);
-              const out = '#' + hx(r) + hx(gr) + hx(b);
-              de.style.setProperty('--nb-sbars', window._nbEyeBlend ? window._nbEyeBlend(out) : out);
-              const t = document.querySelector('meta[name="theme-color"]');
-              if (t) t.content = window._nbEyeBlend ? window._nbEyeBlend(out) : out;
-            } catch (e) {}
-          };
-          img.src = m[1];
-        }
-      }
-    } else {
-      de.classList.remove('nb-acct-bars');
-      de.style.removeProperty('--nb-sbars');
-      if (window._nbSetThemeColor) window._nbSetThemeColor(document.body.classList.contains('pink') ? 'pink' : document.body.classList.contains('night') ? 'dark' : 'light');
-    }
-  } catch (e) {}
-};
 function openAccountScreen(focusInvite) {
   try { _nbSelDrop(); } catch (e) {} // the Account screen covers the Library; don't leave its selection FABs floating over it
   try { if (window._nbSplashBgRefresh) window._nbSplashBgRefresh(); } catch (e) {} // re-decode the background before it shows
   nbRenderAccountDialog();
   document.getElementById('account-screen').classList.add('open');
-  window._nbWebAcctBars(true); // [2026-11-24 14:52 | web-account-bars]
   lockScroll();
   _nbStartAcctSplash3D();
   if (focusInvite === true && !nbIsSignedIn() && document.getElementById('account-invite-fields').style.display !== 'block') nbToggleSigninInvite();
@@ -33945,7 +34098,6 @@ function closeAccountScreen() {
   // A sign-in started from Settings isn't tied to this screen, so back stays available.
   if (signinBtn && signinBtn.disabled && window._nbSigninOrigin !== 'settings') return;
   document.getElementById('account-screen').classList.remove('open');
-  window._nbWebAcctBars(false); // [2026-11-24 14:52 | web-account-bars]
   unlockScroll();
   _nbStopAcctSplash3D();
   _nbReleaseToastHold(true);
@@ -34231,7 +34383,6 @@ async function hideSplash() {
     const fs = document.querySelector('style[data-flash]');
     if (fs) fs.remove();
     document.documentElement.style.backgroundColor = '';
-    window._nbBarsLast = null; try { if (window._nbBarsDo) window._nbBarsDo(); } catch (e) {} // [2026-11-24 15:16 | eye-care-app-bars] tinted bars first, then the web view stops being full-bleed
     try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {}
     window._nbBarsLast = null;
     try { if (typeof window._nbSyncBars === 'function') window._nbSyncBars(); } catch (e) {}
@@ -34241,7 +34392,7 @@ async function hideSplash() {
     if (flashStyle) flashStyle.remove();
     document.documentElement.style.backgroundColor = '';
   }
-  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); if (!keepBars) { window._nbBarsLast = null; try { if (window._nbBarsDo) window._nbBarsDo(); } catch (e) {} try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {} window._nbBarsLast = null; try { if (typeof window._nbSyncBars === 'function') window._nbSyncBars(); } catch (e) {} } }, 420);
+  setTimeout(() => { if (s.parentNode) s.parentNode.removeChild(s); if (!keepBars) { try { if (window._nbSplashFull) window._nbSplashFull(false); } catch (e) {} window._nbBarsLast = null; try { if (typeof window._nbSyncBars === 'function') window._nbSyncBars(); } catch (e) {} } }, 420);
   // Every fresh launch lands on the sign-in screen (signed in or not) until Back is
   // tapped; a quick resume from the background keeps whatever screen they were on.
   // Opened last so the scroll lock it takes isn't undone by unlockScroll() above.
@@ -34626,7 +34777,7 @@ function _nbExportNotesRun() {
     return _nbDownloadBackupBlob(blob, fileName, canShareErr ? ('canShare threw: ' + canShareErr.message) : 'canShare({files}) returned false');
   }
   return navigator.share({ files: [file], title: 'Bluebook Backup' })
-    .then(() => showToast('Backup shared'))
+    .then(() => { _nbNudgeBackupDone(); showToast('Backup shared'); })
     .catch(err => {
       // AbortError just means the user dismissed the share sheet —
       // not a failure, so don't fall back to a forced download in
@@ -34646,13 +34797,15 @@ async function _nbExportViaCapacitor(backupJson, fileName, cap) {
     // Android app: copy the cache file into Downloads/Bluebook via MediaStore (NbFiles bridge in MainActivity) - no storage permission needed. Falls through to Share if unavailable.
     if (window.NbFiles && window.NbFiles.saveToDownloads) {
       const r = String(window.NbFiles.saveToDownloads(result.uri, fileName, /\.html$/.test(fileName) ? 'text/html' : 'application/json'));
-      if (r === 'OK') { showToast('Saved to Downloads/Bluebook'); return; }
+      if (r === 'OK') { _nbNudgeBackupDone(); showToast('Saved to Downloads/Bluebook'); return; }
       _nbLog('native save to downloads', r);
     }
     if (cap.Share) {
       await cap.Share.share({ title: 'Bluebook Backup', url: result.uri });
+      _nbNudgeBackupDone();
       showToast('Backup shared');
     } else {
+      _nbNudgeBackupDone();
       showToast('Backup saved');
     }
   } catch (e) {
@@ -34687,7 +34840,7 @@ function _nbDownloadBackupBlob(blob, fileName, reason) {
     a.href = reader.result; // data: URI, e.g. data:application/json;base64,....
     a.download = fileName;
     document.body.appendChild(a); a.click(); a.remove();
-    showToast('Backup downloaded'); _done();
+    _nbNudgeBackupDone(); showToast('Backup downloaded'); _done();
   };
   reader.onerror = function () {
     // Last-resort fallback if even FileReader fails for some reason —
@@ -34697,7 +34850,7 @@ function _nbDownloadBackupBlob(blob, fileName, reason) {
     a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    showToast('Backup downloaded'); _done();
+    _nbNudgeBackupDone(); showToast('Backup downloaded'); _done();
   };
   reader.readAsDataURL(blob);
   return _p;
@@ -36245,7 +36398,8 @@ function _pubOnSlugInput(raw) {
   const slug = raw.toLowerCase();
   const statusEl = document.getElementById('pub-slug-status');
   const btn = document.getElementById('pub-publish-btn');
-  document.getElementById('pub-slug-example').textContent = 'E.g. example.com/@' + (slug || 'untitled-note');
+  // [2026-11-25 06:52 | publish-address-preview] changed: the example address shows the real publish address (host of NB_PUBLISH_API), not example.com.
+  document.getElementById('pub-slug-example').textContent = 'E.g. ' + NB_PUBLISH_API.replace(/^https?:[/][/]/, '').replace(/[/]$/, '') + '/@' + (slug || 'untitled-note');
   _pubSlugAvailable = false;
   _pubSlugUse = null;
   btn.disabled = true;
@@ -37189,16 +37343,39 @@ async function _nbPageNavToggle(done) {
     _nbPageNavOff = hide; _nbStoryNavData = null; done(true);
   } catch (e) { _nbLog('page nav save', e); showToast('Couldn\u2019t save your choice' + _nbFailureReason(e)); done(false); }
 }
+// [2026-11-25 | page-duplicate] Settings > All my notes > "Let others duplicate my pages": the author's choice, kept on the account (GET/PUT /account/page-dup). Same pattern as the arrows switch above.
+let _nbPageDup = null, _nbPageDupLoading = false, _nbPageDupTk = null, _nbPageDupTry = 0;
+function _nbPageDupOn() {
+  const tk = nbIsSignedIn() ? nbSessionToken() : null;
+  if (_nbPageDupTk !== tk) { _nbPageDupTk = tk; _nbPageDup = null; _nbPageDupTry = 0; }
+  if (_nbPageDup === null && tk && !_nbPageDupLoading && Date.now() - _nbPageDupTry > 30000) {
+    _nbPageDupLoading = true; _nbPageDupTry = Date.now();
+    _pubTeamsReq('/account/page-dup').then(r => r.ok ? r.json() : null).then(d => {
+      if (d && typeof d.on === 'boolean' && _nbPageDupTk === tk) { _nbPageDup = d.on; try { window._nbStRefresh && window._nbStRefresh(); } catch (e) {} }
+    }).catch(e => _nbLog('page dup pref', e)).then(() => { _nbPageDupLoading = false; });
+  }
+  return !!_nbPageDup;
+}
+async function _nbPageDupToggle(done) {
+  if (!nbIsSignedIn() || _pubOfflineGuard()) { done(false); return; }
+  const on = !_nbPageDupOn();
+  try {
+    const res = await _pubTeamsReq('/account/page-dup', 'PUT', { on });
+    if (!res.ok) throw new Error('page dup ' + res.status);
+    _nbPageDup = on; _nbStoryNavData = null; done(true);
+  } catch (e) { _nbLog('page dup save', e); showToast('Couldn\u2019t save your choice' + _nbFailureReason(e)); done(false); }
+}
 // Settings > Privacy: who can invite this account to edit.
 let _nbTeamInvAllow = null, _nbTeamInvLoading = false, _nbTeamInvBlocked = 0, _nbTeamInvWarned = false, _nbTeamInvFailed = false;
-function _nbTeamInvWarn() { if (_nbTeamInvWarned) return; _nbTeamInvWarned = true; showToast('Couldn\u2019t load your invitation setting, so it may not show your real choice.'); }
+// [2026-11-25 | page-duplicate-legal] changed: a failed load (always the case offline) no longer shows a toast; it is only logged and retried on reconnect. The row shows as off until it loads.
+function _nbTeamInvWarn() { if (_nbTeamInvWarned) return; _nbTeamInvWarned = true; _nbLog('invitation setting not loaded'); }
 function _nbTeamInvGet() {
   if (_nbTeamInvAllow === null) {
     if (!_nbTeamInvLoading && nbIsSignedIn()) {
       _nbTeamInvLoading = true;
       _pubTeamsReq('/teams/prefs').then(r => r.ok ? r.json() : null).then(d => { _nbTeamInvFailed = !d; if (!d) _nbTeamInvWarn(); if (d && typeof d.allow === 'boolean') { _nbTeamInvAllow = d.allow; _nbTeamInvBlocked = d.blocked || 0; try { window._nbStRefresh && window._nbStRefresh(); } catch (e) {} } }).catch(() => { _nbTeamInvFailed = true; _nbTeamInvWarn(); }).finally(() => { _nbTeamInvLoading = false; });
     }
-    return 'all';
+    return ''; // [2026-11-25 | page-duplicate-legal] not loaded: no chip is pressed and the row is dimmed (row off), so it never shows a choice that may be wrong
   }
   return _nbTeamInvAllow ? 'all' : 'none';
 }
@@ -37932,7 +38109,7 @@ function _nbSaveSubscribedAuthors(set) {
   const next = JSON.stringify([...set]);
   let changed = true;
   try { changed = localStorage.getItem(key) !== next; localStorage.setItem(key, next); } catch (e) {}
-  if (changed) _nbCountsSoon('unread'); // following or unfollowing someone changes what the Subscribed feed holds
+  if (changed) { _nbCountsSoon('unread'); _nbCountsSoon('templates'); } // following or unfollowing someone changes what the Subscribed feed holds, and which pages Templates can offer
   try { _nbStAcctAt = 0; } catch (e) {} // a follow/unfollow changes Settings > Following: refetch it next time Settings opens
 }
 // Other people's devices only ever see an account's opaque author ID, never its
@@ -38564,7 +38741,7 @@ async function _nbStoryNavLoad(slug) {
   if (!res.ok) throw new Error('author nav ' + res.status);
   const d = await res.json();
   const ok = x => (x && typeof x.slug === 'string' && x.slug) ? { slug: x.slug, title: typeof x.title === 'string' ? x.title : '' } : null;
-  _nbStoryNavData = { slug, prev: ok(d && d.prev), next: ok(d && d.next), off: !!(d && d.off), at: Date.now() }; // [2026-11-03 04:24 | page-list] off: the author hid the arrows and the list button
+  _nbStoryNavData = { slug, prev: ok(d && d.prev), next: ok(d && d.next), off: !!(d && d.off), dup: !!(d && d.dup), at: Date.now() }; // [2026-11-03 04:24 | page-list] off: the author hid the arrows and the list button
   return _nbStoryNavData;
 }
 async function _nbStoryNavSend(src) {
@@ -38573,7 +38750,8 @@ async function _nbStoryNavSend(src) {
   try {
     const d = await _nbStoryNavLoad(slug);
     if (_nbCurrentStorySlug !== slug || !_nbStoryNavFrameOk(src)) return;
-    src.postMessage(d.off ? { type: 'nb-nav', off: true } : { type: 'nb-nav', prev: !!d.prev, next: !!d.next, list: !!(d.prev || d.next), float: !!window._nbSt('floatPageNav') }, '*'); // [2026-11-03 04:24 | page-list] [2026-11-03 08:38 | floating-nav] changed: float is the reader's Floating page arrows setting
+    src.postMessage(d.off ? { type: 'nb-nav', off: true } : { type: 'nb-nav', prev: !!d.prev, next: !!d.next, list: !!(d.prev || d.next), float: !!window._nbSt('floatPageNav'), dup: !!d.dup }, '*'); // [2026-11-25 | page-duplicate] dup: the author allows copies, so the page shows the + button
+     // [2026-11-03 04:24 | page-list] [2026-11-03 08:38 | floating-nav] changed: float is the reader's Floating page arrows setting
   } catch (e) { _nbLog('story nav', e); } // no answer: the chevrons stay hidden
 }
 function _nbStoryNavGo(src, dir) {
@@ -38581,6 +38759,66 @@ function _nbStoryNavGo(src, dir) {
   const d = _nbStoryNavData, t = d && d.slug === _nbCurrentStorySlug ? (dir === 'prev' ? d.prev : dir === 'next' ? d.next : null) : null;
   if (!t) return;
   nbOpenStory(t.slug, _nbCurrentStoryAuthorSub, t.title || '', false);
+}
+// [2026-11-25 | page-duplicate] The + beside the list button (shown when the page's author allows copies, setting "Let others duplicate my pages"; the answer from /author-nav carries dup).
+// A tap comes back as nb-nav-dup. It asks on the same dialog as the editor's \"+\" (New canvas) with the wording adapted, then rebuilds the live page as a new note of the person's own
+// with the same parser behind Restore published page and Reset to published copy (_nbFetchPublishedCopy). The copy is not linked to the page: no slug, no edit token, never synced as a restore.
+function _nbStoryNavDup(src) {
+  if (!_nbStoryNavFrameOk(src)) return;
+  const slug = _nbCurrentStorySlug, d = _nbStoryNavData;
+  if (!d || d.slug !== slug || d.off || !d.dup) return; // the author doesn't allow copies (or it changed): nothing to do
+  _nbAskNewCanvas(slug, true);
+}
+// [2026-11-25 | templates] The one New canvas dialog, for the viewer's + (fromViewer: lifted above the page viewer) and for a card in the Templates category (no viewer open).
+function _nbAskNewCanvas(slug, fromViewer) {
+  // [2026-11-25 | page-duplicate-legal] a copy is a new note, so the free note limit applies like the editor's \"+\"; from the viewer the paywall is lifted above it
+  if (nbAtFreeNoteLimit()) { if (fromViewer) document.getElementById('paywall-overlay').classList.add('over-viewer'); openPaywallDialog(); return; }
+  const ov = document.getElementById('edit-reset-overlay');
+  document.getElementById('edit-reset-title').textContent = 'Start a new canvas?';
+  document.getElementById('edit-reset-body').textContent = 'A copy of this page will open in the editor as a new canvas of your own. The original page isn\u2019t changed. It\u2019s still the author\u2019s work, so please respect their rights.';
+  document.getElementById('edit-reset-confirm').textContent = 'New canvas';
+  const shut = () => ov.classList.remove('open', 'over-viewer'); // over-viewer lifts the dialog above the page viewer
+  if (fromViewer) ov.classList.add('open', 'over-viewer'); else { ov.classList.remove('over-viewer'); ov.classList.add('open'); }
+  document.getElementById('edit-reset-cancel').onclick = shut;
+  ov.onclick = (e) => { if (e.target === ov) shut(); };
+  document.getElementById('edit-reset-confirm').onclick = () => { shut(); _nbDuplicatePage(slug, fromViewer); };
+}
+// A card in Templates: the author already allows copies (the list is filtered by the Worker), so go straight to the dialog.
+function nbTemplateTap(slug) { _nbAskNewCanvas(slug, false); }
+let _nbDupBusy = false;
+async function _nbDuplicatePage(slug, fromViewer) {
+  if (_nbDupBusy) return;
+  _nbDupBusy = true;
+  showToast('Copying page\u2026');
+  try {
+    const pub = await _nbFetchPublishedCopy(slug);
+    if (fromViewer && _nbCurrentStorySlug !== slug) return; // the viewer was closed or moved on while fetching
+    const frag = _nbRetagStarters(pub.frag);
+    // Whatever the editor holds is saved first, the same as leaving it any other way.
+    if (document.getElementById('screen-create').classList.contains('active') && _nbGetEditingId()) { try { _nbCommitDraftToNote(); } catch (e) { _nbLog('dup commit', e); } }
+    const now = Date.now(), acct = nbAccount();
+    const note = {
+      id: 'n_' + now.toString(36) + Math.random().toString(36).slice(2, 7),
+      title: 'Copy of ' + (pub.title || 'Untitled note'), // not the page's own title, so the copy is never mistaken for it when pages are matched back to notes
+      desc: '', category: '', tags: [],
+      content: frag, pageBg: pub.pageBg || undefined, pageBgCustom: pub.pageBgCustom, desktopView: pub.desktopView,
+      createdAt: now, updatedAt: now
+    };
+    if (acct) note.acct = acct.sub;
+    const arr = nbLoadNotes();
+    arr.unshift(note);
+    if (!nbSaveNotesArr(arr)) { showToast('Couldn\u2019t copy the page: storage is full'); return; }
+    if (fromViewer) nbCloseStory();
+    _nbPendingAdSlug = null; _nbPendingAdFragment = null; _nbAdViewCounted = false; _nbAdBlockAdded = false; _nbPendingAdDraftId = null;
+    buildCatBar();
+    nbRenderNotesScreen();
+    nbOpenNoteForEdit(note.id);
+    showToast('Page copied to a new canvas');
+    nbSyncPullThenPush();
+  } catch (e) {
+    _nbLog('duplicate page', e);
+    showToast('Couldn\u2019t copy that page' + (_nbFailureReason(e) || '. Try again.'));
+  } finally { _nbDupBusy = false; }
 }
 // [2026-11-03 04:24 | page-list] The list button between the arrows under "Report an issue" opens this sheet: the page's author's public pages, newest first, drawn as Subscribed cards, with a search bar above.
 // GET /author-pages/:slug (20 at a time, no sign-in). Search filters what is loaded (title, description, tags) and keeps pulling the next pages while it is active (up to NB_AP_AUTO more), so older pages can be found.
@@ -39465,7 +39703,7 @@ let _nbSubFeedTotal = null; // size of the whole list, as the worker reports it 
 // (see _nbFilteredEmptyMessage); the title stays specific to each state.
 // Each tip can carry a `need` so it only shows where it reads right: 'notes' = needs notes to exist (skipped on the
 // first-run screen), 'out' = for signed-out people (skipped once signed in, and on the sign-in screen, which already
-// says it), 'swipe' = only while the Media swipe setting is on.
+// says it), 'in' = needs a signed-in account, 'swipe' = only while the Media swipe setting is on.
 const NB_EMPTY_LEADS = [
   { t: 'Mix text, photos, voice notes, checklists, and more into scrapbook-style notes. ' },
   { t: 'On the Write screen, tap Voice to add a voice note, then tap the mic to record. ' },
@@ -39484,7 +39722,10 @@ const NB_EMPTY_LEADS = [
   { t: 'Add a poll to a published page and watch the votes come in. ', need: 'notes' },
   { t: 'Add a Payments block to a published page to take payments from your visitors. ', need: 'notes' },
   { t: 'Publish a note as an ad to get it seen by more people. ', need: 'notes' },
-  { t: 'Subscribe to authors you like to see their new stories in Subscribed. ' }
+  { t: 'Subscribe to authors you like to see their new stories in Subscribed. ' },
+  // [2026-11-25 | empty-tips] added: duplicating published pages (the + beside the list button, and the author's switch for it)
+  { t: 'Tap + under a published page, when its author allows copies, to open a copy as a new note of your own. ' },
+  { t: 'Turn on \u201cLet others duplicate my pages\u201d in Settings so people can copy your published pages as notes of their own. ', need: 'in' }
 ];
 // Rotates so the empty states cover the whole app, not just Write: starts on the next one each launch
 // and moves on whenever a category is picked, so it stays put across re-renders of the same list.
@@ -39503,6 +39744,7 @@ function nbEmptyLead(opts) {
     const l = NB_EMPTY_LEADS[(_nbEmptyLeadIdx + i) % n];
     if (l.need === 'notes' && opts.noNotes) continue;
     if (l.need === 'out' && (opts.signInScreen || nbIsSignedIn())) continue;
+    if (l.need === 'in' && !nbIsSignedIn()) continue; // needs an account (the switch only exists once signed in)
     if (l.need === 'swipe' && !swipeOn) continue;
     return l.t;
   }
@@ -39564,7 +39806,9 @@ async function nbRenderSubscribedFeed() {
       ? 'Stories and published notes are tied to your account, so this needs you to be signed in.'
       : _nbActiveCat === 'Alerts'
         ? 'Alerts bring you announcements and messages about your account, so this needs you to be signed in.'
-        : 'The Subscribed feed follows accounts, so it needs you to be signed in.');
+        : _nbFeedKind() === 'templates'
+          ? 'Templates come from the people you subscribe to and the pages you liked, so this needs you to be signed in.'
+          : 'The Subscribed feed follows accounts, so it needs you to be signed in.');
     _nbSubCarousel(true);
     return;
   }
@@ -40752,7 +40996,7 @@ function _nbSubCardHtmlRaw(s) {
   const showAuthor = s.authorProfileName && _nbActiveCat !== 'Published'; // your own notes don't need your name on them
   // Same action buttons as a normal card, wired to the local copy (none if that note hasn't synced to this device yet).
   // Your own notes open in the editor (like a card in All); the story viewer is the fallback if the local copy isn't on this device.
-  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : `nbOpenStoryChecked('${sid}','${asub}','${title}')`;
+  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : _nbFeedKind() === 'templates' ? `nbTemplateTap('${sid}')` : `nbOpenStoryChecked('${sid}','${asub}','${title}')`; // [2026-11-25 | templates] a template card asks New canvas, then opens the copy in the editor
   return `
       <div class="guide-card" data-slug="${esc(s.slug)}" onclick="${open}" role="button" tabindex="0" onkeydown="if (event.key==='Enter') { ${open} }">
         ${showAuthor ? `<span class="gc-author-name">${esc(s.authorProfileName)}${s.verified ? _NB_VERIFIED_TICK : (s.verifiedProfile ? _NB_VERIFIED_PROFILE_TICK : '')}</span>` : ''}
@@ -40942,6 +41186,7 @@ async function _nbLoadSubFeedPage() {
     const path = tab === 'stories' ? '/account/stories'
       : tab === 'published' ? '/account/published-notes'
       : tab === 'alerts' ? '/alerts'
+      : tab === 'templates' ? '/account/templates'
       : tab === 'liked' ? '/account/liked-notes' : '/subscriptions/feed';
     const res = await _nbApiFetch(NB_PUBLISH_API.replace(/\/$/, '') + path + qs, {
       headers: { 'Authorization': 'Bearer ' + nbSessionToken() }
@@ -40974,6 +41219,9 @@ async function _nbLoadSubFeedPage() {
       } else if (tab === 'alerts') {
         emptyTitle.textContent = 'No alerts';
         emptySub.textContent = nbAlertsEmptySub();
+      } else if (tab === 'templates') {
+        emptyTitle.textContent = 'No templates yet';
+        emptySub.textContent = nbEmptyLead() + 'Pages from the people you subscribe to, and pages you liked, show up here when their author lets others duplicate them.';
       } else if (tab === 'liked') {
         emptyTitle.textContent = 'No liked notes yet';
         emptySub.textContent = nbEmptyLead() + 'Tap the heart on a story, or on a note you opened from a link, and it will be kept here.';
@@ -41013,7 +41261,7 @@ async function _nbLoadSubFeedPage() {
       _nbSubFeedPaintKey = null;
       _nbRevealFade(empty); grid.style.display = 'none'; grid.innerHTML = '';
       emptyTitle.textContent = 'Could not load';
-      emptySub.textContent = 'Something went wrong loading ' + (tab === 'stories' ? 'your stories' : tab === 'published' ? 'your published notes' : tab === 'alerts' ? 'your alerts' : (tab === 'liked' ? 'your liked notes' : 'the Subscribed feed')) + '. Try again.';
+      emptySub.textContent = 'Something went wrong loading ' + (tab === 'stories' ? 'your stories' : tab === 'published' ? 'your published notes' : tab === 'alerts' ? 'your alerts' : tab === 'templates' ? 'templates' : (tab === 'liked' ? 'your liked notes' : 'the Subscribed feed')) + '. Try again.';
       _nbSubCarousel(true);
     } else {
       showToast('Couldn\u2019t load more' + _nbFailureReason(e));
@@ -43225,7 +43473,7 @@ function nbImportNotes(e) {
 /* ===================== Category pills + search ===================== */
 const NB_BASE_CATS = ['All', 'Favourites', 'Uncategorised'];
 let _nbActiveCat = 'All';
-let _nbSubTab = 'feed'; // inside Subscribed: 'feed' (who you follow) or 'liked' (notes you liked)
+let _nbSubTab = 'feed'; // inside Subscribed: 'feed' (who you follow), 'liked' (notes you liked) or 'templates' (pages from those accounts and likes whose author allows copies)
 // Counts on the capsule tabs: Published (live notes on this account), Stories (how many of them are showing in
 // stories), Subscribed (notes in the feed this account hasn't opened yet) and Liked (notes it has liked). null = not
 // known yet (no count drawn, rather than a wrong 0). They belong to the account they were fetched for, so a different
@@ -43237,6 +43485,25 @@ const _nbCountSeq = { published: 0, stories: 0, liked: 0, unread: 0 };
 const _nbCountAt = { published: 0, stories: 0, liked: 0, unread: 0 };
 const NB_COUNT_PATHS = { published: '/account/published-notes', stories: '/account/stories', liked: '/account/liked-notes' };
 let _nbPubCountsSub = null;
+// [2026-11-25 | templates-tab] Whether the Templates tab has anything in it: null = not known yet, true / false from /account/counts (its `templates`) or from the list itself once opened.
+// The tab is only drawn when this is true, or while it is the open tab (so it never vanishes under the person); otherwise the capsule is just Subscribed | Liked.
+let _nbTplAvail = null;
+function _nbSetTplAvail(v) { if (v === _nbTplAvail) return; _nbTplAvail = v; buildCatBar(); try { nbNudgeRender(); } catch (e) {} } // the bar keeps its sideways scroll when redrawn; the page's own scroll is not touched
+let _nbTplListAt = 0;
+// Fallback when /account/counts can't say (an older worker, or it couldn't work it out): the first page of the Templates list itself answers it. At most once a minute.
+async function _nbFetchTplFromList() {
+  if (!nbIsSignedIn() || Date.now() - _nbTplListAt < 60000) return;
+  _nbTplListAt = Date.now();
+  const sub = _nbPubCountsSub;
+  try {
+    const res = await _nbApiFetch(NB_PUBLISH_API.replace(/\/$/, '') + '/account/templates', { headers: { 'Authorization': 'Bearer ' + nbSessionToken() } });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!nbIsSignedIn() || nbAccount().sub !== sub) return;
+    _nbNotePubCount('templates', d);
+  } catch (e) { _nbLog('templates check', e); }
+}
+function _nbShowTplTab() { return _nbTplAvail === true || (_nbActiveCat === 'Subscribed' && _nbSubTab === 'templates'); }
 // A list's size from its first page: the server's total when it sends one, else the rows themselves when the
 // whole list fit in one page (no nextCursor); a partial page with no total is unknown, not "the page size".
 function _nbPubListTotal(data) {
@@ -43256,7 +43523,7 @@ function _nbApplyPubCounts(next) {
     if ((v === null) !== (_nbPubCounts[k] === null)) shape = true; else value = true;
     _nbPubCounts[k] = v;
   }
-  if (shape) buildCatBar(); else { if (value) nbUpdateCatCounts(); _nbRefreshPublishedCat(); } // the count can also be what makes the Published pill appear or go
+  if (shape) buildCatBar(); else { if (value) nbUpdateCatCounts(); _nbRefreshPublishedCat(); _nbRefreshCapsule(); } // the count can also be what makes the Published / Subscribed pill appear or go
 }
 // Counts belong to whoever is signed in: moving to another account (or signing out) forgets every number and
 // retires everything in flight. Returns the signed-in account, or null.
@@ -43267,6 +43534,7 @@ function _nbCountsAdopt() {
     _nbPubCountsSub = sub;
     NB_COUNT_KEYS.forEach(k => { _nbCountSeq[k]++; _nbCountAt[k] = 0; });
     _nbApplyPubCounts({ published: null, stories: null, liked: null, unread: null });
+    _nbTplListAt = 0; _nbSetTplAvail(null);
   }
   return acct;
 }
@@ -43277,6 +43545,10 @@ function _nbNotePubCount(kind, data) {
   const acct = nbAccount();
   if (!acct || acct.sub !== _nbPubCountsSub) return; // counts for another account's session: the next fetch re-keys them
   if (kind === 'feed') { if (data && typeof data.unread === 'number' && data.unread >= 0) _nbApplyPubCounts({ unread: data.unread }); return; }
+  if (kind === 'templates') { // not a counted tab: the first page only tells whether the Templates tab has anything (an empty page that still has a cursor settles nothing)
+    if (data && Array.isArray(data.stories) && !data.error) { if (data.stories.length) _nbSetTplAvail(true); else if (!data.nextCursor) _nbSetTplAvail(false); }
+    return;
+  }
   if (!(kind in NB_COUNT_PATHS)) return;
   const t = _nbPubListTotal(data);
   if (t !== null) _nbApplyPubCounts({ [kind]: t });
@@ -43343,10 +43615,13 @@ async function _nbFetchPubCounts(force, minMs) {
         if (!nbIsSignedIn() || nbAccount().sub !== sub) return;
         const next = {};
         keys.forEach(k => { if (d && typeof d[k] === 'number' && d[k] >= 0 && seqs[k] === _nbCountSeq[k]) next[k] = d[k]; }); // a key refreshed or nudged meanwhile keeps its newer value
+        if (d && typeof d.templates === 'number') _nbSetTplAvail(d.templates > 0); // [2026-11-25 | templates-tab]
+        else if (_nbTplAvail === null) _nbFetchTplFromList(); // the worker couldn't say: ask the list instead (re-tried each minute while unknown)
         if (Object.keys(next).length) { _nbApplyPubCounts(next); return; }
       }
     } catch (e) { _nbLog('account counts', e); }
   }
+  _nbFetchTplFromList(); // no counts route: the Templates tab is decided from its list
   await Promise.all(keys.map(k => _nbFetchCount(k, true)));
 }
 function _nbFetchSubUnread(force) { return _nbFetchCount('unread', force, 8000); }
@@ -43771,7 +44046,7 @@ function buildCatBar() {
   _nbPublishedShown = _nbShowPublishedCat();
   _nbAlertsShown = _nbShowAlertsCat();
   _nbTeamsShown = notes.some(nbNoteInTeamsCat);
-  // Default order: All, Favorites, [Teams], [Alerts], [Published | Stories], [Subscribed | Liked], Uncategorized, custom... (bracketed ones only
+  // Default order: All, Favorites, [Teams], [Alerts], [Published | Stories], [Subscribed | Liked | Templates], Uncategorized, custom... (bracketed ones only
   // once they have something). A pill the person has moved (hold and drag) keeps the place they gave it; "All" always stays first.
   const withFeeds = [
     NB_BASE_CATS[0], NB_BASE_CATS[1],
@@ -43785,9 +44060,12 @@ function buildCatBar() {
   const _catHtml = allCats.map(c => {
     if (c === 'Subscribed') {
       const on = _nbActiveCat === 'Subscribed';
-      return `<span class="cat-capsule" data-cat-key="subscribed" role="group" aria-label="Subscribed and Liked">`
+      const _tpl = _nbShowTplTab(); // [2026-11-25 | templates-tab] only two tabs (Subscribed | Liked) unless there are templates
+      return `<span class="cat-capsule" data-cat-key="subscribed" role="group" aria-label="${_tpl ? 'Subscribed, Liked and Templates' : 'Subscribed and Liked'}">`
         + `<button class="cat-pill${on && _nbSubTab === 'feed' ? ' active' : ''}" onclick="selectCat('Subscribed','feed')">Subscribed${nbCatCountHtml('Subscribed', notes)}</button>`
-        + `<button class="cat-pill${on && _nbSubTab === 'liked' ? ' active' : ''}" onclick="selectCat('Subscribed','liked')">Liked${nbCatCountHtml('Liked', notes)}</button></span>`;
+        + `<button class="cat-pill${on && _nbSubTab === 'liked' ? ' active' : ''}" onclick="selectCat('Subscribed','liked')">Liked${nbCatCountHtml('Liked', notes)}</button>`
+        + (_tpl ? `<button class="cat-pill${on && _nbSubTab === 'templates' ? ' active' : ''}" onclick="selectCat('Subscribed','templates')">Templates</button>` : '')
+        + `</span>`; // [2026-11-25 | templates] no count: the list is only known once opened
     }
     if (c === 'Published') {
       const on = _nbActiveCat === 'Published';
@@ -43826,7 +44104,7 @@ function buildCatBar() {
 // The Subscribed | Liked capsule shows once signed in with a follow or a like (liked notes
 // can come from a searched link, with no follow), and stays while it's the open category.
 function _nbShowSubCapsule() {
-  return nbIsSignedIn() && (_nbSubscribedAuthors().size > 0 || _nbLikedSlugs().size > 0 || _nbActiveCat === 'Subscribed');
+  return nbIsSignedIn() && (_nbSubscribedAuthors().size > 0 || _nbLikedSlugs().size > 0 || (_nbPubCounts.liked || 0) > 0 || _nbActiveCat === 'Subscribed'); // the server's liked count covers a like made on another device that hasn't synced down yet
 }
 // Likes change the capsule's visibility without going through a follow: rebuild only if it flipped.
 function _nbRefreshCapsule() { if (_nbShowSubCapsule() !== _nbCapsuleShown) buildCatBar(); }
@@ -43989,7 +44267,8 @@ function selectCat(cat, tab) {
   document.body.classList.add('nb-nav'); setTimeout(() => document.body.classList.remove('nb-nav'), 450);
   const same = cat === _nbActiveCat;
   _nbCatYCapture(); // before _nbActiveCat / the sub-tab change (a tap on the open pill reloads in place and keeps its position)
-  if (cat === 'Subscribed') _nbSubTab = tab === 'liked' ? 'liked' : 'feed';
+  if (cat === 'Subscribed') _nbSubTab = tab === 'liked' ? 'liked' : tab === 'templates' ? 'templates' : 'feed';
+  if (cat === 'Subscribed' && _nbSubTab === 'templates') { try { _nbNudgeSeen('templates'); } catch (e) {} } // [2026-11-25 | templates-tab] they've looked: no more reminder about it
   if (cat === 'Published') _nbPubTab = tab === 'stories' ? 'stories' : 'published';
   _nbActiveCat = cat;
   _nbRsSave({ c: cat, t: cat === 'Subscribed' ? _nbSubTab : cat === 'Published' ? _nbPubTab : '' });
@@ -44475,12 +44754,428 @@ function _nbEnsureActiveCat() {
   _nbActiveCat = 'All';
   return true;
 }
+// [2026-11-25 09:25 | library-nudges] Library reminders. One short card at the top of Library > All. Nothing here needs the Worker or an account.
+// [2026-11-25 09:32 | library-nudges] changed: many more reminders, driven by a table for settings. Kept on this device under nb_nudges_v1:
+//   { backup: last backup time, born: first run, dismissed: { id: time }, lastDismiss: time, on: { setting: time first seen unusual }, seen: { media: time } }.
+// Order: backup, storage, unpublished changes, server activity (alerts, messages, growth), risky settings (delete confirmation, auto-sync), ad news (paused, unlocked),
+// free note limit, other settings, server tips (Subscribed, close to a package, unspent views, ad notes, invites, photos too big), then feature tips
+// (publish, story, Media, app lock, sign in, favourites, categories). Only the first one that applies is shown.
+// [2026-11-25 10:25 | library-nudges] Spacing: urgent ones (storage, notes not synced, delete confirmation or Auto-sync off, a backup 60 days overdue) show whenever they apply and return after 2 days;
+// every other one waits 3 days after any dismissal or tap and 2 days after first run, and comes back after 7, then 14, then 30 days.
+const NB_NUDGE_KEY = 'nb_nudges_v1';
+const NB_NUDGE_DAY = 86400000;
+const NB_NUDGE_BACKUP_DAYS = 30; // no backup for this long: remind
+const NB_NUDGE_BACKOFF = [7, 14, 30]; // [2026-11-25 10:25 | library-nudges] a reminder that was dismissed or acted on may come back after this many days: the 1st, 2nd, then every later time
+const NB_NUDGE_URGENT_REPEAT_DAYS = 2; // an urgent one (data at risk) comes back sooner
+const NB_NUDGE_GAP_DAYS = 3;     // after any dismissal or tap, only urgent reminders show for this long
+const NB_NUDGE_NEWBIE_DAYS = 2;  // and for this long after first run
+const NB_NUDGE_URGENT_BACKUP_DAYS = 60; // a backup this overdue counts as urgent
+const NB_NUDGE_ON_DAYS = 1;      // a setting counts as left on (or off) once it has been that way this long
+const NB_NUDGE_STORAGE_CHARS = 3500000; // saved text on this device (characters) above which a space reminder shows. An estimate, the real limit differs by phone.
+let _nbNudgeCur = null, _nbNudgeKey = '';
+const _nbNudgeMemo = {};
+// Settings that are worth a reminder when they have been left in an unusual state. bad(): the unusual raw value. fix: the value put back.
+// risk: shown before the free note limit. need(): only counts when true. after(): redraw what the setting changes.
+const NB_NUDGE_SETTINGS = [
+  { k: 'confirmDelete', risk: true, bad: function (v) { return v === false; }, title: 'Delete confirmation is off', body: 'Tapping the bin removes a note straight away. Turn confirmation back on to be asked first.', label: 'Turn on', fix: true, done: 'Delete confirmation is on' },
+  { k: 'syncEvery', risk: true, need: function () { return nbIsSignedIn(); }, bad: function (v) { return String(v) === '0'; }, title: 'Auto-sync is off', body: 'Your edits only reach your account when you tap Sync now. Turn it back on to save them as you go.', label: 'Turn on', fix: 20, done: 'Auto-sync is on' },
+  { k: 'eyeCare', bad: function (v) { return v === true; }, title: 'Eye care is on', body: 'A warm tint covers the whole app, so colours look different. Turn it off for true colours.', label: 'Turn off', fix: false, done: 'Eye care is off' },
+  { k: 'reduceMotion', bad: function (v) { return v === true; }, title: 'Reduce motion is on', body: 'Animations and transitions are turned down. Turn it off if you want them back.', label: 'Turn off', fix: null, done: function () { return window._nbSt('reduceMotion') ? 'Reduce motion now follows your phone' : 'Reduce motion is off'; } },
+  { k: 'hideDashes', bad: function (v) { return v === true; }, title: 'Media icon is hidden', body: 'The sidebar icon beside the Library title is hidden. Tapping the title still opens Media.', label: 'Show icon', fix: false, done: 'Media icon is showing' },
+  { k: 'hideLibCount', bad: function (v) { return v === true; }, title: 'Library counts are hidden', body: 'The note counts on the category pills are hidden.', label: 'Show counts', fix: false, done: 'Library counts are showing', after: function () { buildCatBar(); } },
+  { k: 'hideMdCount', bad: function (v) { return v === true; }, title: 'Media counts are hidden', body: 'The counts on the Media tabs are hidden.', label: 'Show counts', fix: false, done: 'Media counts are showing' },
+  { k: 'maskEmail', need: function () { return nbIsSignedIn(); }, bad: function (v) { return v === true; }, title: 'Your email is hidden', body: 'Your email address is masked everywhere in the app.', label: 'Show email', fix: false, done: 'Email address is showing' },
+  { k: 'images', bad: function (v) { return v === false; }, title: 'Image previews are off', body: 'Note cards show no photos. Turn previews back on if images look missing.', label: 'Turn on', fix: true, done: 'Image previews are on', after: function () { nbRenderNotesScreen(); } },
+  { k: 'stories', bad: function (v) { return v === false; }, title: 'Stories strip is off', body: 'Stories no longer show above your notes in All.', label: 'Turn on', fix: true, done: 'Stories strip is on', after: function () { _nbSyncStoriesStripVisibility(); } },
+  { k: 'mediaSwipe', bad: function (v) { return v === false; }, title: 'Media swipe is off', body: 'Swiping in from the left edge no longer opens Media.', label: 'Turn on', fix: true, done: 'Media swipe is on' }
+];
+function _nbNudgeLoad() {
+  try { const o = JSON.parse(localStorage.getItem(NB_NUDGE_KEY) || '{}'); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; }
+}
+function _nbNudgeSave(st) { try { localStorage.setItem(NB_NUDGE_KEY, JSON.stringify(st)); } catch (e) {} }
+// Called wherever a backup was really saved or shared (not when the share sheet was dismissed).
+function _nbNudgeBackupDone() {
+  const st = _nbNudgeLoad(); st.backup = Date.now(); _nbNudgeSave(st);
+  try { nbNudgeRender(); } catch (e) {}
+}
+// Remembers that the person has used a feature, so its tip stops (Media: set when the Media screen opens).
+function _nbNudgeSeen(k) {
+  const st = _nbNudgeLoad();
+  if (!st.seen) st.seen = {};
+  if (!st.seen[k]) { st.seen[k] = Date.now(); _nbNudgeSave(st); }
+}
+// Own published pages whose note has changed since the last publish. Same test as the Publish sheet's Save changes button
+// (hash of the page the note would publish now against publishedContentHash), kept per note version so it is only worked out once.
+function _nbNudgeEdited(notes) {
+  const out = []; let checks = 0;
+  notes.forEach(function (n) {
+    if (!n || !n.publishedSlug || !n.publishToken || n.teamRole || !n.publishedContentHash) return;
+    if ((n.updatedAt || 0) <= (n.lastPublishedAt || n.publishedAt || 0)) return;
+    const mk = n.id + ':' + n.updatedAt + ':' + n.publishedContentHash;
+    let dirty = _nbNudgeMemo[mk];
+    if (dirty === undefined) {
+      if (checks >= 8) return;
+      checks++;
+      try { dirty = _hashStr(nbBuildStaticNoteHtml(n, n.publishedSlug)) !== n.publishedContentHash; } catch (e) { dirty = false; }
+      _nbNudgeMemo[mk] = dirty;
+    }
+    if (dirty) out.push(n);
+  });
+  return out.sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+}
+// Saved text on this device, in characters. Worked out at most every 5 minutes.
+function _nbNudgeStorageChars(now) {
+  const m = _nbNudgeMemo.__stor;
+  if (m && now - m.t < 300000) return m.v;
+  let v = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); v += k.length + (localStorage.getItem(k) || '').length; } } catch (e) {}
+  _nbNudgeMemo.__stor = { t: now, v: v };
+  return v;
+}
+// True when any note carries a link Media can play. Kept per set of note versions.
+function _nbNudgeHasMedia(notes) {
+  const key = notes.map(function (n) { return n.id + ':' + (n.updatedAt || 0); }).join(',');
+  const m = _nbNudgeMemo.__media;
+  if (m && m.k === key) return m.v;
+  const re = /youtu\.be|youtube\.com|youtube-nocookie\.com|spotify\.com|streamable\.com/i;
+  const v = notes.some(function (n) { return re.test(n.content || ''); });
+  _nbNudgeMemo.__media = { k: key, v: v };
+  return v;
+}
+function _nbNudgeSettingItem(e) {
+  return { id: e.k, urgent: !!e.risk, title: e.title, body: e.body, label: e.label, go: function () {
+    window._nbStPut(e.k, e.fix);
+    try { if (e.after) e.after(); } catch (x) {}
+    try { window._nbStRefresh(); } catch (x) {}
+    showToast(typeof e.done === 'function' ? e.done() : e.done);
+    nbNudgeRender();
+  } };
+}
+// [2026-11-25 09:52 | library-nudges] Server reminders. Read from the account the app is already signed in to, through routes the app already calls
+// (GET /ads/mine, GET /account/subscriber-count) plus counts other parts of the app keep fresh (alerts, messages, Subscribed, photos too big to back up).
+// One request pair at most every 5 minutes (1 minute after a failure), only while Library > All shows a reminder card. Nothing is stored but
+// baselines in nb_nudges_v1 under srv[account]: { tier, subs, likes } = what was last acknowledged, so "new" means new since then.
+const NB_NUDGE_SRV_OK_MS = 300000;
+const NB_NUDGE_SRV_RETRY_MS = 60000;
+const NB_NUDGE_NEAR = 0.6; // an unmet ad requirement this far along counts as close
+let _nbNudgeSrv = null, _nbNudgeSrvBusy = false, _nbNudgeSrvTry = 0;
+// [2026-11-25 10:08 | library-nudges] A note with a Stripe payment block (data-py-m="card"). Kept per note version so a note is only searched once.
+function _nbNudgeHasPay(notes) {
+  return notes.some(function (n) {
+    if (!n || !n.publishedSlug || n.teamRole) return false;
+    const mk = 'pay:' + n.id + ':' + (n.updatedAt || 0);
+    let v = _nbNudgeMemo[mk];
+    if (v === undefined) { try { v = /data-py-m=\\?["']card/.test(JSON.stringify(n)); } catch (e) { v = false; } _nbNudgeMemo[mk] = v; }
+    return v;
+  });
+}
+// [2026-11-25 10:08 | library-nudges] Notes that have not reached the account: edited after the last push (syncBaseAt) or never pushed, and left alone for 10 minutes,
+// far longer than Auto-sync takes, so a number here means sync is off, paused or failing.
+const NB_NUDGE_UNSYNCED_MS = 600000;
+function _nbNudgeUnsynced(notes, now) {
+  if (!nbIsSignedIn()) return 0;
+  const sub = nbAccount().sub;
+  return notes.filter(function (n) {
+    if (!n || /^n_demo/.test(String(n.id || '')) || n.teamRole) return false;
+    if (n.acct && n.acct !== sub) return false;
+    const u = n.updatedAt || 0;
+    if (!u || now - u < NB_NUDGE_UNSYNCED_MS) return false;
+    return n.syncBaseAt === undefined ? !n.acct : u > n.syncBaseAt;
+  }).length;
+}
+// Opens Stripe's own setup page, the same call the page editor's Payments panel makes.
+async function _nbNudgeStripeGo() {
+  if (!nbIsSignedIn()) return;
+  try {
+    const res = await _nbApiFetch(NB_PUBLISH_API.replace(/\/$/, '') + '/pay/connect', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + nbSessionToken() }, body: '{}' });
+    let d = null; try { d = await res.json(); } catch (e) {}
+    if (res.ok && d && d.ok && typeof d.url === 'string' && /^https:\/\/[a-z0-9.-]+\.stripe\.com\//i.test(d.url)) {
+      const r = await _nbOpenExternalLinkResult(d.url);
+      if (r.opened) { if (_nbNudgeSrv) _nbNudgeSrv.at = 0; _nbNudgeSrvTry = 0; return; } // asked again when the person is back
+      showToast(r.copied ? 'Couldn\u2019t open Stripe. The link was copied; paste it into your browser.' : 'Couldn\u2019t open Stripe. Try again.');
+      return;
+    }
+    showToast(d && typeof d.error === 'string' && d.error && d.error.length <= 200 ? d.error : 'Couldn\u2019t start Stripe setup. Try again.');
+  } catch (e) { showToast('Couldn\u2019t reach the app\u2019s server. Check your connection.'); }
+}
+function _nbNudgeSrvLoad() {
+  if (!nbIsSignedIn()) { _nbNudgeSrv = null; return; }
+  if (_nbNudgeSrvBusy || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  const sub = nbAccount().sub, now = Date.now();
+  if (_nbNudgeSrv && _nbNudgeSrv.sub === sub && now - _nbNudgeSrv.at < NB_NUDGE_SRV_OK_MS) return;
+  if (now - _nbNudgeSrvTry < NB_NUDGE_SRV_RETRY_MS) return;
+  _nbNudgeSrvTry = now; _nbNudgeSrvBusy = true;
+  const api = NB_PUBLISH_API.replace(/\/$/, ''), h = { 'Authorization': 'Bearer ' + nbSessionToken() };
+  const get = function (path) { return fetch(api + path, { headers: h }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+  try { _nbFetchAlertUnread(); } catch (e) {}
+  try { _nbFetchSubUnread(); } catch (e) {}
+  try { _nbMsgFetchChats(false); } catch (e) {}
+  const post = function (path) { return fetch(api + path, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, h), body: '{}' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+  Promise.all([get('/ads/mine'), get('/account/subscriber-count'), _nbNudgeHasPay(nbVisibleNotes()) ? post('/pay/account') : null]).then(function (r) {
+    _nbNudgeSrvBusy = false;
+    if (!nbIsSignedIn() || nbAccount().sub !== sub) return;
+    const ads = r[0], acct = r[1];
+    if (!ads && !acct) return; // nothing came back: try again in a minute
+    _nbNudgeSrv = { sub: sub, at: Date.now(),
+      standing: (ads && ads.standing) || null,
+      balance: ads ? Math.max(0, Math.floor(Number(ads.creditBalance) || 0)) : 0,
+      subs: acct && typeof acct.count === 'number' ? acct.count : null,
+      likes: acct && typeof acct.likes === 'number' ? acct.likes : null,
+      pay: r[2] && r[2].ok && r[2].data ? r[2].data : null };
+    try { nbNudgeRender(); } catch (e) {}
+  });
+}
+// Runs fn on this account's baselines and saves them.
+function _nbNudgeSrvAck(fn) {
+  const S = _nbNudgeSrv; if (!S) return;
+  const st = _nbNudgeLoad(); if (!st.srv) st.srv = {};
+  const b = st.srv[S.sub] || (st.srv[S.sub] = {});
+  try { fn(b, S); } catch (e) {}
+  _nbNudgeSave(st);
+}
+// First sight of an account only records where it stands, so nothing is "new" until something changes. A drop moves the baseline down.
+// Returns true when st changed.
+function _nbNudgeSrvBase(st) {
+  const S = _nbNudgeSrv; if (!S) return false;
+  if (!st.srv) st.srv = {};
+  let b = st.srv[S.sub], ch = false;
+  if (!b) { b = st.srv[S.sub] = {}; ch = true; }
+  const fix = function (k, v, lowerOnly) { if (v == null) return; if (b[k] === undefined || (lowerOnly && v < b[k])) { b[k] = v; ch = true; } };
+  fix('tier', S.standing ? S.standing.tier : null, true);
+  fix('subs', S.subs, true);
+  fix('likes', S.likes, true);
+  return ch;
+}
+function _nbNudgeSrvItems(st, notes, own, now) {
+  const out = { social: [], ads: [], tips: [] };
+  if (!nbIsSignedIn()) return out;
+  const S = _nbNudgeSrv, b = (S && st.srv && st.srv[S.sub]) || {}, sd = S && S.standing;
+  const plural = function (n, one, many) { return n === 1 ? one : many; };
+  const byNew = own.slice().sort(function (a, c) { return (c.updatedAt || 0) - (a.updatedAt || 0); });
+  const num = function (n) { return Number(n).toLocaleString(); };
+  // Social: shown right after the safety reminders.
+  const uns = _nbNudgeUnsynced(notes, now);
+  if (uns > 0) {
+    out.social.push({ id: 'unsynced:' + uns, urgent: true, title: uns === 1 ? '1 note hasn\u2019t reached your account' : uns + ' notes haven\u2019t reached your account',
+      body: 'Auto-sync may be off or stuck. Sync now to save ' + plural(uns, 'it', 'them') + ' to your account.', label: 'Sync now', go: function () { nbSyncNow(); } });
+  }
+  if (_nbAlertUnread > 0) {
+    out.social.push({ id: 'alerts:' + _nbAlertUnread, title: _nbAlertUnread === 1 ? '1 new alert' : _nbAlertUnread + ' new alerts',
+      body: 'Comments, likes and other activity on your pages are waiting in Alerts.', label: 'Open Alerts', go: function () { selectCat('Alerts'); } });
+  }
+  if (_nbMsgUnread > 0) {
+    out.social.push({ id: 'msgs:' + _nbMsgUnread, title: _nbMsgUnread === 1 ? '1 unread team message' : _nbMsgUnread + ' unread team messages',
+      body: 'Someone wrote in a team chat you are part of.', label: 'Open Messages', go: function () { nbMessagesNavClick(); } });
+  }
+  if (S && b.subs !== undefined) {
+    const ds = S.subs != null ? S.subs - b.subs : 0, dl = (S.likes != null && b.likes !== undefined) ? S.likes - b.likes : 0;
+    if (ds > 0 || dl > 0) {
+      const parts = [];
+      if (ds > 0) parts.push(num(ds) + ' new ' + plural(ds, 'subscriber', 'subscribers'));
+      if (dl > 0) parts.push(num(dl) + ' new ' + plural(dl, 'like', 'likes'));
+      out.social.push({ id: 'growth:' + S.subs + ':' + S.likes, title: 'Your pages are growing',
+        body: 'You have ' + parts.join(' and ') + ' since you last checked.', label: 'Open Published', go: function () { selectCat('Published'); },
+        ack: function () { _nbNudgeSrvAck(function (bb, SS) { if (SS.subs != null) bb.subs = SS.subs; if (SS.likes != null) bb.likes = SS.likes; }); } });
+    }
+  }
+  // Ads: shown after the risky settings.
+  if (sd && sd.held && Number(sd.held.until) > now) {
+    out.ads.push({ id: 'adhold:' + Math.round(Number(sd.held.until) / NB_NUDGE_DAY), title: 'Some ad packages are paused',
+      body: 'A recent rule strike paused them. The next one comes back on ' + new Date(Number(sd.held.until)).toLocaleDateString() + '.', label: 'See details', go: function () { nbGoSettingsAds(); } });
+  }
+  if (sd && b.tier !== undefined && Number(sd.tier) > b.tier) {
+    out.ads.push({ id: 'adtier:' + sd.tier, title: 'New ad package unlocked',
+      body: 'You can now run ads of up to ' + num(sd.maxViews) + ' views' + (sd.maxActive ? ', ' + sd.maxActive + ' at once' : '') + '.', label: 'See packages', go: function () { nbGoSettingsAds(); },
+      ack: function () { _nbNudgeSrvAck(function (bb, SS) { if (SS.standing) bb.tier = SS.standing.tier; }); } });
+  }
+  if (S && S.pay && S.pay.connected && !S.pay.ready && !S.pay.unverified && _nbNudgeHasPay(notes)) {
+    out.ads.push({ id: 'paysetup', title: 'Finish your Stripe setup', body: 'A page of yours has a payment block, but Stripe needs a few more details before it can take payments.', label: 'Continue setup', go: function () { _nbNudgeStripeGo(); } });
+  }
+  // Tips that need the server: shown after the other settings.
+  if (_nbPubCounts && _nbPubCounts.unread > 0) {
+    out.tips.push({ id: 'subunread:' + _nbPubCounts.unread, title: 'New in Subscribed',
+      body: num(_nbPubCounts.unread) + ' ' + plural(_nbPubCounts.unread, 'note', 'notes') + ' from people you follow ' + plural(_nbPubCounts.unread, 'is', 'are') + ' not opened yet.', label: 'Open Subscribed', go: function () { selectCat('Subscribed'); } });
+  }
+  if (_nbTplAvail === true && !(st.seen && st.seen.templates)) { // [2026-11-25 | templates-tab] there are templates to try and the person hasn't opened them yet; opening the Templates tab ends it (_nbNudgeSeen in selectCat). Dismissing or tapping follows the usual repeat routine (7, 14, then every 30 days)
+    out.tips.push({ id: 'templates', title: 'Templates to try', body: 'People you follow, and pages you liked, have pages you can copy and make your own.', label: 'See templates', go: function () { selectCat('Subscribed', 'templates'); } });
+  }
+  if (sd && !sd.held && Array.isArray(sd.tiers)) {
+    const t = sd.tiers.find(function (x) { return x && x.views > sd.maxViews && !x.met; });
+    const r = t && Array.isArray(t.reqs) ? t.reqs.find(function (x) { return x && !x.met; }) : null;
+    if (r && typeof r.need === 'number' && typeof r.have === 'number' && r.need > r.have && r.have / r.need >= NB_NUDGE_NEAR) {
+      out.tips.push({ id: 'adnear:' + t.tier + ':' + r.label + ':' + r.have, title: 'Close to the ' + num(t.views) + '-view package',
+        body: 'Just ' + num(r.need - r.have) + ' more ' + esc(r.label) + ' to unlock it.', label: 'See progress', go: function () { nbGoSettingsAds(); } });
+    }
+  }
+  if (S && S.balance > 0) {
+    out.tips.push({ id: 'credit:' + S.balance, title: 'You have ' + num(S.balance) + ' unspent ad views',
+      body: 'Refunds and invite gifts are kept on your account. Put them into an ad.', label: 'Use them', go: function () { nbGoSettingsAds(); } });
+  }
+  if (sd && sd.activeAds > 0 && typeof sd.notes === 'number' && sd.minNotesPerAd) {
+    const need = sd.minNotesPerAd * (sd.activeAds + 1) - sd.notes;
+    if (need > 0) {
+      out.tips.push({ id: 'adnotes:' + need, title: 'Your ads need more notes',
+        body: 'Every running ad needs ' + sd.minNotesPerAd + ' published notes behind it. Publish ' + need + ' more to run another ad.',
+        label: byNew.length ? 'Publish a note' : null, go: function () { if (byNew.length) nbOpenPublishSheet(byNew[0].id); } });
+    }
+  }
+  const rf = sd && sd.referral;
+  if (rf && rf.canRedeem) {
+    out.tips.push({ id: 'redeem', title: 'Joined through a friend?', body: 'Add their invite code in your first 14 days so they get credit.', label: 'Add the code', go: function () { nbGoSettingsAds(); } });
+  } else if (rf && !rf.invited && own.length >= 3) {
+    out.tips.push({ id: 'invite', title: 'Invite a friend', body: 'A friend who joins and publishes a note counts toward your ad access.', label: 'Get my code', go: function () { nbGoSettingsAds(); } });
+  }
+  if (typeof _nbImgTooLarge !== 'undefined' && _nbImgTooLarge.size > 0) {
+    out.tips.push({ id: 'bigimg:' + _nbImgTooLarge.size, title: 'Some photos can\u2019t back up',
+      body: _nbImgTooLarge.size + ' ' + plural(_nbImgTooLarge.size, 'photo is', 'photos are') + ' too large for your account backup. ' + plural(_nbImgTooLarge.size, 'It stays', 'They stay') + ' on this device.', label: null });
+  }
+  return out;
+}
+function _nbNudgeList(st, notes, now) {
+  const L = [];
+  const held = function (k) { return st.on && st.on[k] && now - st.on[k] >= NB_NUDGE_ON_DAYS * NB_NUDGE_DAY; };
+  const own = notes.filter(function (n) { return !/^n_demo/.test(String(n.id || '')); });
+  let oldest = 0;
+  notes.forEach(function (n) { const c = Number(n && n.createdAt) || 0; if (c && (!oldest || c < oldest)) oldest = c; });
+  const ref = st.backup || oldest || st.born || now;
+  if (now - ref >= NB_NUDGE_BACKUP_DAYS * NB_NUDGE_DAY) {
+    const d = Math.floor((now - ref) / NB_NUDGE_DAY);
+    L.push({ id: 'backup', urgent: d >= NB_NUDGE_URGENT_BACKUP_DAYS, title: 'Back up your notes',
+      body: st.backup ? 'Your last backup was ' + d + '\u00a0days ago. Save a fresh copy of your notes.' : 'You haven\u2019t backed up your notes yet. Save a copy so they\u2019re safe.',
+      label: 'Back up now', go: function () { nbExportNotes(); } });
+  }
+  if (_nbNudgeStorageChars(now) >= NB_NUDGE_STORAGE_CHARS) {
+    L.push({ id: 'storage', urgent: true, title: 'Storage is getting full', body: 'Your notes take up a lot of space on this device. Back up, then clear out what you no longer need.',
+      label: 'Back up now', go: function () { nbExportNotes(); } });
+  }
+  const ed = _nbNudgeEdited(notes);
+  if (ed.length) {
+    L.push({ id: 'edited', title: 'Unpublished changes',
+      body: ed.length === 1 ? '\u201c' + esc(ed[0].title || 'Untitled note') + '\u201d has changes that aren\u2019t on its page yet.' : ed.length + ' of your pages have changes that aren\u2019t live yet.',
+      label: ed.length === 1 ? 'Update page' : 'Review', go: function () { nbOpenPublishSheet(ed[0].id); } });
+  }
+  const SV = _nbNudgeSrvItems(st, notes, own, now);
+  SV.social.forEach(function (x) { L.push(x); });
+  NB_NUDGE_SETTINGS.forEach(function (e) { if (e.risk && held(e.k)) L.push(_nbNudgeSettingItem(e)); });
+  SV.ads.forEach(function (x) { L.push(x); });
+  if (!nbIsPro() && notes.length >= NB_FREE_NOTE_LIMIT - 1) {
+    L.push({ id: 'limit', title: notes.length >= NB_FREE_NOTE_LIMIT ? 'Free note limit reached' : 'Almost at the free limit',
+      body: 'You\u2019ve used ' + Math.min(notes.length, NB_FREE_NOTE_LIMIT) + ' of ' + NB_FREE_NOTE_LIMIT + ' free notes. Bluebook Pro gives you unlimited notes.',
+      label: 'See Pro', go: function () { openPaywallDialog(); } });
+  }
+  NB_NUDGE_SETTINGS.forEach(function (e) { if (!e.risk && held(e.k)) L.push(_nbNudgeSettingItem(e)); });
+  SV.tips.forEach(function (x) { L.push(x); });
+  const byNew = own.slice().sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+  if (own.length >= 2 && !notes.some(function (n) { return n.publishedSlug; })) {
+    L.push({ id: 'publish', title: 'Publish a note', body: 'Publish a note to get one link that anyone can open.',
+      label: 'Publish a note', go: function () { nbOpenPublishSheet(byNew[0].id); } });
+  }
+  const live = notes.filter(function (n) { return n.publishedSlug && n.publishToken && !n.teamRole; });
+  if (live.length && nbIsSignedIn() && !live.some(function (n) { return n.showInStories; })) {
+    L.push({ id: 'story', title: 'Add a page to your story', body: 'None of your pages are in your story yet. Add one so people can find it.',
+      label: 'Add to story', go: function () { nbOpenPublishSheet(live[0].id); } });
+  }
+  if (!(st.seen && st.seen.media) && _nbNudgeHasMedia(notes)) {
+    L.push({ id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.',
+      label: 'Open Media', go: function () { nbOpenMedia(); } });
+  }
+  if (window.nbLock && !window.nbLock.enabled() && notes.length >= 3) {
+    L.push({ id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.',
+      label: 'Open Settings', go: function () { nbGoScreen('settings'); } });
+  }
+  if (!nbIsSignedIn() && notes.length >= 3) {
+    L.push({ id: 'signIn', title: 'Sign in for alerts', body: 'Sign in to hear about comments and likes on your pages.',
+      label: 'Sign in', go: function () { openAccountScreen(); } });
+  }
+  if (notes.length >= 8 && _nbFavorites && _nbFavorites.size === 0) {
+    L.push({ id: 'favourites', title: 'Keep your best notes close', body: 'Tap the heart on a note to find it fast in Favourites.', label: null });
+  }
+  if (notes.length >= 6 && !notes.some(function (n) { return (n.category || '').trim(); })) {
+    L.push({ id: 'categories', title: 'Sort your notes into categories', body: 'Give a note a category and it gets its own pill in the Library.', label: null });
+  }
+  return L;
+}
+function nbNudgeRender() {
+  const host = document.getElementById('nb-nudge');
+  if (!host) return;
+  const off = function () { if (!host.hidden) { host.hidden = true; host.innerHTML = ''; } _nbNudgeCur = null; _nbNudgeKey = ''; };
+  if (!window._nbSt || !window._nbSt('nudges') || _nbActiveCat !== 'All' || _nbSearchQ) return off();
+  const notes = nbVisibleNotes();
+  if (!notes.length) return off();
+  const now = Date.now(), st = _nbNudgeLoad();
+  let dirty = false;
+  if (!st.born) { st.born = now; dirty = true; }
+  if (!st.on) { st.on = {}; dirty = true; }
+  NB_NUDGE_SETTINGS.forEach(function (e) {
+    let unusual = false;
+    try { unusual = !!(window._nbStRaw && e.bad(window._nbStRaw(e.k)) && (!e.need || e.need())); } catch (x) {}
+    if (unusual) { if (!st.on[e.k]) { st.on[e.k] = now; dirty = true; } } else if (st.on[e.k]) { delete st.on[e.k]; dirty = true; }
+  });
+  _nbNudgeSrvLoad();
+  if (_nbNudgeSrvBase(st)) dirty = true;
+  if (dirty) _nbNudgeSave(st);
+  // [2026-11-25 10:25 | library-nudges] Spacing: after any dismissal or tap, and just after first run, only urgent reminders show.
+  const quiet = !!((st.lastDismiss && now - st.lastDismiss < NB_NUDGE_GAP_DAYS * NB_NUDGE_DAY) || (st.born && now - st.born < NB_NUDGE_NEWBIE_DAYS * NB_NUDGE_DAY));
+  const pick = _nbNudgeList(st, notes, now).find(function (x) {
+    if (quiet && !x.urgent) return false;
+    const t = st.dismissed && st.dismissed[x.id];
+    return !(t && now - t < _nbNudgeRepeatMs(st, x));
+  });
+  if (!pick) return off();
+  _nbNudgeCur = pick;
+  const key = [pick.id, pick.title, pick.body, pick.label].join('|');
+  if (key === _nbNudgeKey && !host.hidden) return;
+  _nbNudgeKey = key;
+  host.innerHTML = '<div class="guide-card nb-nudge-card" role="group" aria-label="Reminder">'
+    + '<div class="gc-title">' + esc(pick.title) + '</div>'
+    + '<div class="gc-desc"><div class="gc-desc-text">' + pick.body + '</div></div>'
+    + '<div class="nb-nudge-row">' + (pick.label
+      ? '<button type="button" class="nb-nudge-go" onclick="nbNudgeGo()">' + esc(pick.label) + '</button><button type="button" class="nb-nudge-x" onclick="nbNudgeDismiss()">Not now</button>'
+      : '<button type="button" class="nb-nudge-go" onclick="nbNudgeDismiss()">Got it</button>')
+    + '</div></div>';
+  if (host.hidden) {
+    host.hidden = false;
+    host.style.opacity = '0';
+    void host.offsetWidth;
+    requestAnimationFrame(function () { host.style.opacity = ''; });
+  }
+}
+// [2026-11-25 10:25 | library-nudges] Records that a reminder was dismissed or acted on. The count (per reminder, not per number in its id) lengthens the wait each time.
+function _nbNudgeRecord(st, c) {
+  if (!st.dismissed) st.dismissed = {};
+  if (!st.dcount) st.dcount = {};
+  const base = String(c.id).split(':')[0];
+  st.dismissed[c.id] = st.lastDismiss = Date.now();
+  st.dcount[base] = (st.dcount[base] || 0) + 1;
+}
+function _nbNudgeRepeatMs(st, x) {
+  if (x.urgent) return NB_NUDGE_URGENT_REPEAT_DAYS * NB_NUDGE_DAY;
+  const n = (st.dcount && st.dcount[String(x.id).split(':')[0]]) || 1;
+  return NB_NUDGE_BACKOFF[Math.min(n, NB_NUDGE_BACKOFF.length) - 1] * NB_NUDGE_DAY;
+}
+function nbNudgeGo() {
+  const c = _nbNudgeCur;
+  if (!c || !c.go) return;
+  const st0 = _nbNudgeLoad(); _nbNudgeRecord(st0, c); _nbNudgeSave(st0); // a tap counts as handled, so the next reminder waits
+  try { c.go(); } catch (e) { _nbLog('nudge action', e); }
+  try { if (c.ack) c.ack(); } catch (e) {}
+}
+function nbNudgeDismiss() {
+  const c = _nbNudgeCur;
+  if (!c) return;
+  try { if (c.ack) c.ack(); } catch (e) {}
+  const st = _nbNudgeLoad();
+  _nbNudgeRecord(st, c);
+  _nbNudgeSave(st);
+  nbNudgeRender();
+}
 function nbRenderNotesScreen() {
   try { nbMsgNavSync(); } catch (e) {}
   try { _nbCatYSync(); } catch (e) {} // the category may have changed by a route other than a pill tap
   Promise.resolve().then(() => { try { _nbNoteSelUi(); } catch (e) {} }); // after the list is painted: prune / show the selection UI
   if (_nbEnsureActiveCat()) { buildCatBar(); _nbSyncStoriesStripVisibility(); try { _nbCatYSync(); } catch (e) {} } else _nbTeamsCatRefresh();
   nbUpdateLibraryTitle();
+  try { nbNudgeRender(); } catch (e) { _nbLog('nudge render', e); }
   if (_nbIsFeedCat(_nbActiveCat)) {
     const carousel = document.getElementById('nb-onboard-carousel');
     if (carousel) carousel.style.display = 'none';
@@ -48242,8 +48937,11 @@ function nbBuildSafeHtml(htmlSrc, uiState, draftId, repost) {
   // The canvas runs in this srcdoc iframe, but lockScroll()/unlockScroll() live on the parent window only, so
   // window.lockScroll() inside the canvas threw "is not a function". Bridge them to the parent (same-origin).
   const _scrollBridge = '<script data-noteinfra="1">(function(){function b(n){return function(){try{var p=window.parent;if(p&&p!==window&&typeof p[n]==="function")return p[n].apply(p,arguments)}catch(e){}}}if(typeof window.lockScroll!=="function")window.lockScroll=b("lockScroll");if(typeof window.unlockScroll!=="function")window.unlockScroll=b("unlockScroll")})();<\/script>';
+  // Tells the parent the canvas DOM is parsed and its own DOMContentLoaded boot has run. The parent can't poll readyState when it runs in a sandbox
+  // without allow-same-origin (contentDocument is null), and iframe onload also waits on every image/embed, which can take many seconds.
+  const _readyPing = '<script data-noteinfra="1">function p(){try{parent.postMessage({type:"nb-canvas-ready",seq:"__NB_RENDER_SEQ__"},"*")}catch(e){}}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){setTimeout(p,0)});else setTimeout(p,0);<\/script>';
   const _noScrollbarCss = '<style data-noteinfra="1">html,body{scrollbar-width:none;-ms-overflow-style:none}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}</style>';
-  const _errRelay = `<script data-noteinfra="1">window.onerror=function(msg,src,line,col,err){if(/resizeobserver/i.test(String(msg))){console.warn('Canvas ResizeObserver loop (benign, no toast):',msg);return true}parent.postMessage({type:'markup-error',msg:msg+(line?(' (line '+line+')'):'')},location.origin||'*');return true};window.addEventListener('unhandledrejection',function(ev){var r=ev&&ev.reason,m=(r&&(r.name&&r.message?r.name+': '+r.message:r.message))||String(r);if(navigator.onLine===false||/abort|failed to fetch|networkerror|network request failed|load failed|network error|err_(internet|network|connection|timed)|timed? ?out|timeout|offline|interrupted by|play\\(\\) request|cancell?ed/i.test(m)){console.warn('Canvas rejection (transient, no toast):',m);return}parent.postMessage({type:'markup-error',msg:'Unhandled promise rejection: '+m},location.origin||'*')});<\/script>`;
+  const _errRelay = `<script data-noteinfra="1">window.onerror=function(msg,src,line,col,err){if(/resizeobserver/i.test(String(msg))){console.warn('Canvas ResizeObserver loop (benign, no toast):',msg);return true}parent.postMessage({type:'markup-error',msg:msg+(line?(' (line '+line+')'):'')},(/^https?:/.test(location.origin)?location.origin:'*'));return true};window.addEventListener('unhandledrejection',function(ev){var r=ev&&ev.reason,m=(r&&(r.name&&r.message?r.name+': '+r.message:r.message))||String(r);if(navigator.onLine===false||/abort|failed to fetch|networkerror|network request failed|load failed|network error|err_(internet|network|connection|timed)|timed? ?out|timeout|offline|interrupted by|play\\(\\) request|cancell?ed/i.test(m)){console.warn('Canvas rejection (transient, no toast):',m);return}parent.postMessage({type:'markup-error',msg:'Unhandled promise rejection: '+m},(/^https?:/.test(location.origin)?location.origin:'*'))});<\/script>`;
   // #5b5bd6 is the canvas's one hardcoded accent color (selection/hover/
   // focus highlights, variant swatches, FABs — both in its CSS and in a
   // few JS color-wheel/canvas defaults). Rather than have the canvas read
@@ -48278,7 +48976,7 @@ function nbBuildSafeHtml(htmlSrc, uiState, draftId, repost) {
 #edit-dialog, #backup-sheet, #publish-sheet, #account-dialog, #ap-sheet, #ch-sheet-box, #md-sheet-box,
 #ch-pick .img-pick-box, .img-pick-box { width: 100% !important; max-width: none !important; margin-left: 0 !important; margin-right: 0 !important; box-sizing: border-box }
 #publish-overlay, #ap-overlay, #ch-sheet, #md-sheet { padding-left: 0 !important; padding-right: 0 !important }
-</style>${_noScrollbarCss}</head><body>${_uiStateGlobals}${_repostGlobal}${_scrollBridge}${htmlSrc}${_errRelay}${_NB_NOTE_UI_STATE_SCRIPT}</body></html>`;
+</style>${_noScrollbarCss}</head><body>${_uiStateGlobals}${_repostGlobal}${_scrollBridge}${htmlSrc}${_errRelay}${_readyPing}${_NB_NOTE_UI_STATE_SCRIPT}</body></html>`;  // _readyPing stays before the UI-state script: its MutationObserver would count a script added after it as an edit
 }
 
 /* ===================== Bluebook canvas: draft state + render =====================
@@ -48465,6 +49163,7 @@ function _nbForcePreviewClass(html) {
     return /\bcv-preview\b/.test(cls) ? full : pre + cls + ' cv-preview' + post;
   });
 }
+var _nbRenderSeq = 0;
 function nbRenderCanvas(forcePreview) {
   // Image data comes from _nbImgCache; built before it loads, image blocks render empty (see the replay in the boot IIFE).
   window._nbCanvasBuiltBeforeImgs = _nbImgCacheReady ? null : { forcePreview: !!forcePreview };
@@ -48547,34 +49246,54 @@ function nbRenderCanvas(forcePreview) {
     // — so the reveal has to wait for an actual ready signal rather than
     // happening unconditionally right after assignment.
     let _revealed = false;
+    const seq = String(++_nbRenderSeq);
+    safeHtml = safeHtml.replace('__NB_RENDER_SEQ__', seq);
     const reveal = function(timedOut) {
       if (_revealed) return;
       _revealed = true;
+      // A newer render has replaced this one (e.g. Save re-renders, then switches screens, and a sync/theme render can follow):
+      // the new render owns the iframe, mask and wrap now, so this stale one must not touch them or toast.
+      if (seq !== String(_nbRenderSeq)) return;
+      window._nbCanvasReady = null;
       try { if (window.nbMediaHookFrame) window.nbMediaHookFrame(); } catch (e) {}
       wrap.classList.add('show');
       unmaskAfterSettle();
       nbSyncUndoRedoButtons();
-      // Neither onload nor the readyState poll below ever caught it —
-      // something's actually stuck (bad srcdoc, a hung script), not just
-      // slow. Still reveal rather than leaving the loadmask spinning
+      // Nothing ever signalled that the canvas loaded, even after a generous wait: something's actually stuck
+      // (bad srcdoc, a hung script), not just slow. Still reveal rather than leaving the loadmask spinning
       // forever, but say so instead of quietly pretending it loaded fine.
-      if (timedOut) showToast('This note is taking too long to load. Try reopening it.');
+      // Only worth saying while the Editor is on screen: a canvas rebuilt behind the Notes list (after Save) isn't being waited on.
+      const _edScreen = document.getElementById('screen-create');
+      if (timedOut && (!_edScreen || _edScreen.classList.contains('active'))) showToast('This note is taking too long to load. Try reopening it.');
+    };
+    // Liveness signal: the canvas posts nb-canvas-ready once its DOM is parsed and its own boot has run. It works even when the app runs
+    // in a sandbox without allow-same-origin (contentDocument is null there, so readyState can't be polled). It doesn't reveal on its own
+    // (the reveal timing below is unchanged); it only tells the fallback that a slow load is slow, not stuck.
+    let _canvasAlive = false;
+    window._nbCanvasReady = function(e) {
+      if (e && e.source === iframe.contentWindow && e.data && String(e.data.seq) === seq) _canvasAlive = true;
     };
     iframe.onload = function() { iframe.onload = null; reveal(); };
     iframe.srcdoc = safeHtml;
     // Belt-and-braces fallback: some engines don't reliably bubble the
     // iframe document's load state to the iframe element's own load
-    // event, so also poll readyState.
-    let _pollTries = 0;
+    // event, so also poll readyState (only possible when the document is reachable).
+    // onload waits on every image/embed in the note, so a slow network can hold it back for a long time with the note itself ready:
+    // after ~3 s, a canvas that has reported in is revealed quietly. One that hasn't gets up to 20 s (the template is ~2 MB) before the toast.
+    const _pollStart = Date.now();
     const _pollReady = function() {
       if (_revealed) return;
+      if (seq !== String(_nbRenderSeq)) { _revealed = true; return; } // superseded by a newer render: stop polling
       let doc;
       try { doc = iframe.contentDocument; } catch (e) {}
-      if (doc && doc.readyState !== 'loading') { reveal(); return; }
-      if (++_pollTries < 100) { setTimeout(_pollReady, 30); return; }
-      reveal(true); // ~3s of polling with nothing — give up waiting and say so
+      // The iframe's initial about:blank document reports 'complete' until the srcdoc navigation commits: don't mistake it for the note.
+      if (doc && doc.URL !== 'about:blank' && doc.readyState !== 'loading') { reveal(); return; }
+      const waited = Date.now() - _pollStart;
+      if (_canvasAlive && waited >= 3000) { reveal(); return; }
+      if (waited < 20000) { setTimeout(_pollReady, 50); return; }
+      reveal(true);
     };
-    setTimeout(_pollReady, 30);
+    setTimeout(_pollReady, 50);
   }
 }
 
@@ -48699,6 +49418,7 @@ function nbOpenNoteForEdit(id) {
 let _nbLastCanvasErrorToast = 0;
 window.addEventListener('message', function (e) {
   if (!e.data) return;
+  if (e.data.type === 'nb-canvas-ready') { try { if (window._nbCanvasReady) window._nbCanvasReady(e); } catch (err) {} return; }
   if (e.data.type === 'nb-cm') { _nbCommentsBridge(e); return; }
   if (e.data.type === 'nb-poll') { _nbPollBridge(e); return; }
   if (e.data.type === 'nb-textbox') { _nbTextboxBridge(e); return; }
@@ -48718,6 +49438,7 @@ window.addEventListener('message', function (e) {
   if (e.data.type === 'nb-foot-ready') { _nbStoryNavSend(e.source); return; }
   if (e.data.type === 'nb-nav-go') { _nbStoryNavGo(e.source, e.data.dir); return; }
   if (e.data.type === 'nb-nav-list') { if (_nbStoryNavFrameOk(e.source)) nbAuthorPagesOpen(); return; } // [2026-11-03 04:24 | page-list]
+  if (e.data.type === 'nb-nav-dup') { _nbStoryNavDup(e.source); return; } // [2026-11-25 | page-duplicate]
   if (e.data.type === 'nb-verified-tap') { const sf2 = document.getElementById('story-viewer-frame'); if (e.source && sf2 && e.source === sf2.contentWindow) nbVerifiedInfo(); return; }
   if (e.data.type === 'nb-page-ready') { // a page that reports its own layout as settled
     const sf = document.getElementById('story-viewer-frame');
@@ -48746,10 +49467,16 @@ window.addEventListener('message', function (e) {
     if (!(e.source && liveWin && e.source === liveWin)) return;
     const draftId = e.data.noteId;
     if (!draftId) return;
+    // Too big for the full-state autosave: say so once, instead of edits quietly not being kept.
+    let big = !!e.data.tooBig;
+    // Over the cap but byte-for-byte what is saved: nothing is being lost, so neither the warning nor the save block applies.
+    if (big && e.data.bigSig) { try { const bs = _nbCurrentBase(); if (bs && bs.draftId === draftId && typeof bs.savedFragment === 'string' && _nbBigSig(bs.savedFragment) === e.data.bigSig) big = false; } catch (err) {} }
+    if (big && !window._nbTooBigWarned) { window._nbTooBigWarned = true; showToast('This note is too large to keep new edits. Split it into pages or remove something to continue saving.'); }
     const images = e.data.images || {};
     Object.keys(images).forEach(id => { try { _nbWarnNewImage(id, images[id]); if (_nbGetImage(id) !== images[id] || _nbImgSaveFailed.has(id)) _nbSetImage(id, images[id]); } catch (err) {} });
     const prev = _nbLoadDraftUiState(draftId) || {};
     const next = Object.assign({}, prev, e.data.state || {});
+    next.tooBig = big; // set while the note is over the autosave cap; cleared by the next report that is under it
     _nbSaveDraftUiState(draftId, next);
     // This message is the canvas reporting a real content change (it's
     // debounced/triggered on edits, not on mere load) — the first one for
@@ -48775,6 +49502,8 @@ window.addEventListener('message', function (e) {
     if (e.data.noteId && _nbPendingAdSlug && e.data.noteId === _nbPendingAdDraftId) _nbAdBlockAdded = true;
   }
 });
+
+function _nbBigSig(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h << 5) - h + s.charCodeAt(i); h |= 0; } return (h >>> 0).toString(36) + '.' + s.length.toString(36); } // same algorithm as _bigSig in the note iframe
 
 /* ===================== Reset to original ===================== */
 // "Original" means different things depending on context: for a brand
@@ -48858,7 +49587,7 @@ function _nbParsePublishedHtml(html) {
     pageBg = pg.dataset.pageBg;
     if (pageBg === 'custom') { pageBgCustom = pg.style.getPropertyValue('--blk-custom-bg') || undefined; if (pageBgCustom && pg.getAttribute('data-bg-anim')) pageBgCustom += '|anim=' + pg.getAttribute('data-bg-anim'); }
   }
-  return { frag, pageBg, pageBgCustom, desktopView: !!(pg && pg.classList.contains('cv-force-desktop')) }; // the published <body> carries cv-force-desktop (see nbBuildStaticNoteHtml)
+  return { frag, pageBg, pageBgCustom, title: (doc.title || '').trim(), desktopView: !!(pg && pg.classList.contains('cv-force-desktop')) }; // the published <body> carries cv-force-desktop (see nbBuildStaticNoteHtml)
 }
 // Live page -> the pieces a note stores.
 async function _nbFetchPublishedCopy(slug) {
@@ -48961,6 +49690,7 @@ function _nbCommitDraftToNote() {
   if (!existingNote) return false;
   const uiState = _nbLoadDraftUiState(draftId);
   if (!uiState) return false; // nothing edited this session
+  if (uiState.tooBig) return false; // over the autosave cap: the draft's content is stale, so never write it over the note or claim "saved"
   const notes = nbLoadNotes();
   const idx = notes.findIndex(n => n.id === existingNote.id);
   if (idx === -1) return false;
@@ -49188,6 +49918,7 @@ function nbConfirmSave() {
   }
 
   const { draftId, isExisting, note: existingNote, savedFragment, repost } = _nbCurrentBase();
+  { const _bigSt = _nbLoadDraftUiState(draftId); if (_bigSt && _bigSt.tooBig) { showToast('This note is too large to save your latest edits. Split it into pages or remove something, then save.'); return; } }
   // Free-tier cap only ever blocks growing the notes list — updating a
   // note that already exists (isExisting) never changes the count, so
   // it's exempt even once the limit was hit with this exact note already
@@ -49276,6 +50007,38 @@ function nbConfirmSave() {
   nbRenderNotesScreen();
   nbGoScreen('notes');
 }
+
+// [2026-11-25 | scan-anim] Media's empty state is redrawn when a scan starts and ends, so the button used to jump between "Scan library" and "Scanning..." (wider, with a spinner).
+// Remember the button's width after each redraw and, when the next one is a different width, grow or shrink from the old width to the new one.
+(function () {
+  const view = document.getElementById('md-view');
+  if (!view || !window.MutationObserver) return;
+  let lastW = 0, lastTitle = '';
+  new MutationObserver(function () {
+    // The heading and the line under it slide up and fade in when the state changes (Scan library <-> Scanning your notes...), instead of switching abruptly.
+    const ttl = view.querySelector('.md-empty b'), title = ttl ? ttl.textContent : '';
+    if (ttl && lastTitle && title !== lastTitle && ttl.animate && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      const slide = { duration: 380, easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'backwards' };
+      const frames = [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }];
+      ttl.animate(frames, slide);
+      const sub = ttl.nextElementSibling;
+      if (sub && sub.tagName === 'SPAN') sub.animate(frames, Object.assign({}, slide, { delay: 70 }));
+    }
+    lastTitle = title;
+    const btn = view.querySelector('.md-empty .md-btn');
+    if (!btn) { lastW = 0; return; }
+    const w = btn.getBoundingClientRect().width, prev = lastW;
+    lastW = w;
+    if (!prev || !w || Math.abs(prev - w) < 2) return;
+    try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch (e) {}
+    btn.style.overflow = 'hidden'; btn.style.whiteSpace = 'nowrap';
+    btn.style.width = prev + 'px';
+    void btn.offsetWidth;
+    btn.style.transition = 'width .35s cubic-bezier(.3,.9,.3,1)';
+    btn.style.width = w + 'px';
+    setTimeout(function () { btn.style.width = btn.style.transition = btn.style.overflow = btn.style.whiteSpace = ''; }, 420);
+  }).observe(view, { childList: true, subtree: true });
+})();
 
 nbRenderCanvas();
 
@@ -51308,6 +52071,7 @@ var el=document.getElementById('nb-onboard-carousel');if(el)el.classList.add('ca
   }
   function open() {
     if (MD.open) return;
+    try { _nbNudgeSeen('media'); } catch (e) {} // [2026-11-25 09:32 | library-nudges] Media tip stops once Media has been opened by any route
     openPrep();
     $('md-screen').classList.add('open'); $('md-screen').setAttribute('aria-hidden', 'false');
     finishOpen();
