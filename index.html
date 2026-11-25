@@ -43479,10 +43479,10 @@ let _nbSubTab = 'feed'; // inside Subscribed: 'feed' (who you follow), 'liked' (
 // known yet (no count drawn, rather than a wrong 0). They belong to the account they were fetched for, so a different
 // sign-in never shows the previous one's numbers. Each key has its own sequence number so a refresh of one retires
 // only that key's in-flight answer.
-const NB_COUNT_KEYS = ['published', 'stories', 'liked', 'unread'];
-const _nbPubCounts = { published: null, stories: null, liked: null, unread: null };
-const _nbCountSeq = { published: 0, stories: 0, liked: 0, unread: 0 };
-const _nbCountAt = { published: 0, stories: 0, liked: 0, unread: 0 };
+const NB_COUNT_KEYS = ['published', 'stories', 'liked', 'unread', 'templates'];
+const _nbPubCounts = { published: null, stories: null, liked: null, unread: null, templates: null }; // templates: pages from Subscribed and Liked whose author allows copies
+const _nbCountSeq = { published: 0, stories: 0, liked: 0, unread: 0, templates: 0 };
+const _nbCountAt = { published: 0, stories: 0, liked: 0, unread: 0, templates: 0 };
 const NB_COUNT_PATHS = { published: '/account/published-notes', stories: '/account/stories', liked: '/account/liked-notes' };
 let _nbPubCountsSub = null;
 // [2026-11-25 | templates-tab] Whether the Templates tab has anything in it: null = not known yet, true / false from /account/counts (its `templates`) or from the list itself once opened.
@@ -43533,7 +43533,7 @@ function _nbCountsAdopt() {
   if (sub !== _nbPubCountsSub) {
     _nbPubCountsSub = sub;
     NB_COUNT_KEYS.forEach(k => { _nbCountSeq[k]++; _nbCountAt[k] = 0; });
-    _nbApplyPubCounts({ published: null, stories: null, liked: null, unread: null });
+    _nbApplyPubCounts({ published: null, stories: null, liked: null, unread: null, templates: null });
     _nbTplListAt = 0; _nbSetTplAvail(null);
   }
   return acct;
@@ -43545,8 +43545,12 @@ function _nbNotePubCount(kind, data) {
   const acct = nbAccount();
   if (!acct || acct.sub !== _nbPubCountsSub) return; // counts for another account's session: the next fetch re-keys them
   if (kind === 'feed') { if (data && typeof data.unread === 'number' && data.unread >= 0) _nbApplyPubCounts({ unread: data.unread }); return; }
-  if (kind === 'templates') { // not a counted tab: the first page only tells whether the Templates tab has anything (an empty page that still has a cursor settles nothing)
-    if (data && Array.isArray(data.stories) && !data.error) { if (data.stories.length) _nbSetTplAvail(true); else if (!data.nextCursor) _nbSetTplAvail(false); }
+  if (kind === 'templates') { // the first page gives the tab's count (its total) and whether the tab has anything (an empty page that still has a cursor settles nothing)
+    if (data && Array.isArray(data.stories) && !data.error) {
+      const t = _nbPubListTotal(data);
+      if (t !== null) _nbApplyPubCounts({ templates: t });
+      if (data.stories.length) _nbSetTplAvail(true); else if (!data.nextCursor) _nbSetTplAvail(false);
+    }
     return;
   }
   if (!(kind in NB_COUNT_PATHS)) return;
@@ -43606,7 +43610,7 @@ async function _nbFetchPubCounts(force, minMs) {
   if (!_nbCountsRouteMissing) {
     const sub = _nbPubCountsSub;
     keys.forEach(k => { _nbCountAt[k] = Date.now(); });
-    const seqs = {}; keys.forEach(k => { seqs[k] = ++_nbCountSeq[k]; });
+    const seqs = {}; keys.forEach(k => { seqs[k] = ++_nbCountSeq[k]; }); seqs.templates = ++_nbCountSeq.templates;
     try {
       const res = await _nbApiFetch(NB_PUBLISH_API.replace(/\/$/, '') + '/account/counts', { headers: { 'Authorization': 'Bearer ' + nbSessionToken() } });
       if (res.status === 404 || res.status === 405) _nbCountsRouteMissing = true;
@@ -43615,7 +43619,7 @@ async function _nbFetchPubCounts(force, minMs) {
         if (!nbIsSignedIn() || nbAccount().sub !== sub) return;
         const next = {};
         keys.forEach(k => { if (d && typeof d[k] === 'number' && d[k] >= 0 && seqs[k] === _nbCountSeq[k]) next[k] = d[k]; }); // a key refreshed or nudged meanwhile keeps its newer value
-        if (d && typeof d.templates === 'number') _nbSetTplAvail(d.templates > 0); // [2026-11-25 | templates-tab]
+        if (d && typeof d.templates === 'number' && d.templates >= 0) { if (seqs.templates === _nbCountSeq.templates) next.templates = d.templates; _nbSetTplAvail(d.templates > 0); } // [2026-11-25 | templates-tab] the count, and whether the tab shows at all
         else if (_nbTplAvail === null) _nbFetchTplFromList(); // the worker couldn't say: ask the list instead (re-tried each minute while unknown)
         if (Object.keys(next).length) { _nbApplyPubCounts(next); return; }
       }
@@ -43703,6 +43707,7 @@ function nbCatPillCount(c, notes) {
   if (c === 'Stories') return _nbPubCounts.stories;
   if (c === 'Subscribed') return _nbPubCounts.unread; // notes in the feed not opened yet
   if (c === 'Liked') return _nbPubCounts.liked;
+  if (c === 'Templates') return _nbPubCounts.templates; // pages in Subscribed and Liked whose author allows copies
   if (c === 'All') return notes.length;
   if (c === 'Favourites') return notes.filter(n => _nbFavorites.has(n.id)).length;
   if (c === 'Uncategorised') return notes.filter(n => !n.category).length;
@@ -44064,8 +44069,8 @@ function buildCatBar() {
       return `<span class="cat-capsule" data-cat-key="subscribed" role="group" aria-label="${_tpl ? 'Subscribed, Liked and Templates' : 'Subscribed and Liked'}">`
         + `<button class="cat-pill${on && _nbSubTab === 'feed' ? ' active' : ''}" onclick="selectCat('Subscribed','feed')">Subscribed${nbCatCountHtml('Subscribed', notes)}</button>`
         + `<button class="cat-pill${on && _nbSubTab === 'liked' ? ' active' : ''}" onclick="selectCat('Subscribed','liked')">Liked${nbCatCountHtml('Liked', notes)}</button>`
-        + (_tpl ? `<button class="cat-pill${on && _nbSubTab === 'templates' ? ' active' : ''}" onclick="selectCat('Subscribed','templates')">Templates</button>` : '')
-        + `</span>`; // [2026-11-25 | templates] no count: the list is only known once opened
+        + (_tpl ? `<button class="cat-pill${on && _nbSubTab === 'templates' ? ' active' : ''}" onclick="selectCat('Subscribed','templates')">Templates${nbCatCountHtml('Templates', notes)}</button>` : '')
+        + `</span>`; // [2026-11-25 | templates] the Templates count comes from /account/counts (and the list's own total once opened)
     }
     if (c === 'Published') {
       const on = _nbActiveCat === 'Published';
