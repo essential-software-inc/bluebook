@@ -19301,6 +19301,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      TOPICS
         swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay first media (this app)
         embed-autoplay    Settings > Autoplay first media: the viewer starts the first video or audio on a page (this app and the Worker)
+        swipe-hold        a swipe held part way no longer shakes; a page swiped away stops its media (this app and the Worker)
         story-swipe       swiping sideways between stories in the viewer (strip, Subscribed, Liked, Published), next set loads past the strip's end (this app and the Worker)
         online-check      the Back online toast waits until our service answers; if it can't connect it says so, keeps trying, and ends with Back online or a final notice (this app)
         library-nudges     reminders in a card at the top of Library > All: backup, storage, unpublished changes, settings left in an unusual state, free note limit, feature tips, and account news from the server (alerts, messages, notes not synced, subscriber and like growth, ad packages, Stripe setup, unspent views, invites), with a Reminders switch in Settings > Library (app only, no Worker change)
@@ -19367,6 +19368,27 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-25 23:36 | topics: swipe-hold | AI: Claude (app) | Swipe held part way shakes; autoplay keeps playing after a swipe away
+       Start state
+         Holding a swipe part way made the page shake fast. A video started by Autoplay first media kept playing (sound) after swiping to another note.
+       Work done
+         Shake: the page measured the finger with clientX, which is relative to the page's own frame, and the app moves that frame with the finger, so each move changed the next reading and the position flipped back and forth. SWIPE_SCRIPT (Worker) now reads touch.screenX (screen position, not moved by the frame) for the start point, the distance and the speed. The vertical reading is unchanged (the frame only moves sideways).
+         Autoplay: the frame swiped away stays loaded behind the viewer as the neighbour, so its media kept going. _nbSwRotate now sends it nb-autoplay-cfg on:false (_nbAutoPlayStop); PLAY_SCRIPT (Worker) handles it: video and audio are paused, an embed that has autoplay=1 is set back without it. Swiping back to it autoplays again when the setting is on. The other ways out (chevron, page list, back, closing the viewer, a swipe to a page that was not preloaded) already replace or blank the frame, so they already stop it.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The two faults above.
+       Found
+         Nothing else.
+       Important details
+         The stop also pauses a video the reader started by hand in the page that is swiped away.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try: hold a swipe part way (steady, no shake), let go back and forward; swipe a page with a playing video or YouTube embed and check the sound stops; swipe back and check it plays again with the setting on.
+       Depends on
+         Deploy the Worker (index.js) first. Old Worker with the new app: the shake stays and media is not stopped (the page ignores on:false).
 
      SESSION 2026-11-25 22:20 | topics: swipe-setting | AI: Claude (app) | Switch for the note swipe, and Library reminders for it and for autoplay
        Start state
@@ -38666,6 +38688,8 @@ function _nbAutoPlayMsg(src) {
   if (!_nbStoryNavFrameOk(src) || !window._nbSt('autoplayEmbed')) return;
   try { src.postMessage({ type: 'nb-autoplay-cfg', on: true }, '*'); } catch (e) {}
 }
+// [2026-11-25 23:36 | swipe-hold] A page that is swiped away is told to go quiet (nb-autoplay-cfg on:false: its videos and audio pause, an embed that was autoplayed is put back without autoplay), because the frame stays loaded behind the viewer as a neighbour. Sent whatever the Autoplay setting says, so a video started by hand stops too.
+function _nbAutoPlayStop(fr) { try { if (fr && fr.contentWindow) fr.contentWindow.postMessage({ type: 'nb-autoplay-cfg', on: false }, '*'); } catch (e) {} }
 let _nbSwCtx = null; // { kind: 'strip', items, pos, more, batch, batchRaw, fetching } | { kind: 'feed', tab }
 const _nbSwG = { on: false, dir: 0, item: null, w: 0, busy: false, tok: 0, toasted: false };
 function _nbSwItem(s) { return { slug: s.slug, authorSub: s.authorSub || '', title: s.title || '' }; }
@@ -38794,6 +38818,7 @@ async function _nbSwPreload() {
 }
 function _nbSwRotate(dir, slIn) { // the ready frame of slot slIn becomes the viewer frame; the old one goes behind it
   const S = _nbSwSlots, slFar = slIn === S.n ? S.p : S.n, main = document.getElementById('story-viewer-frame'), inc = slIn.fr, oldSlug = _nbCurrentStorySlug;
+  _nbAutoPlayStop(main); // [2026-11-25 23:36 | swipe-hold] the page swiped away stops playing
   main.id = ''; main.classList.add('sv-spare');
   inc.classList.remove('sv-spare'); inc.id = 'story-viewer-frame'; inc._svSlot = null;
   const farFr = slFar.fr;
