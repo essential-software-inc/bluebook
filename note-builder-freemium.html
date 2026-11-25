@@ -1096,6 +1096,15 @@ body.sv-version-on #delete-overlay { z-index: 1000 } /* the confirm dialog has t
 }
 /* A published page lays itself out again as its images, fonts and embeds arrive, so it is held back until it has settled. */
 #story-viewer-frame.sv-loading { opacity: 0; transition: none }
+/* [2026-11-25 21:55 | story-swipe] the neighbouring story while a swipe is in progress: a spinner panel the same colour as the viewer, so nothing loads until the swipe is committed */
+#sv-poster { display: none; position: absolute; left: 0; right: 0; bottom: var(--sv-bottom); z-index: 1; background: inherit; pointer-events: none; will-change: transform; color: var(--nb-hdr-fg, #3366cc); overflow: hidden }
+.sv-poster-spin { position: absolute; left: 50%; top: 0; width: 46px; height: 46px; margin-left: -23px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--nb-bg) 60%, transparent); box-shadow: inset 0 0 0 1px var(--nb-hbd) }
+.sv-poster-spin::before { content: ''; box-sizing: border-box; width: 24px; height: 24px; border-radius: 50%; border: 3px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: svSpin .7s linear infinite }
+body.night #sv-poster { color: #e8e8e8 }
+body.pink #sv-poster { color: #bd2856 }
+#story-viewer-frame { will-change: transform }
+/* the two hidden frames that hold the neighbouring stories (see _nbSwSlots): same size as the viewer's frame, invisible until a swipe slides one in */
+.sv-spare { position: absolute; left: 0; top: var(--sv-frt, 0px); width: 100%; height: calc(100% - var(--sv-frt, 0px) - var(--sv-bottom)); border: none; z-index: 1; visibility: hidden; pointer-events: none; will-change: transform }
 /* Same colour as the app header's icons: blue in Light, near-white in Night, rose in Pink (set here for classic mode; glass mode takes it from --nb-hdr-fg). */
 #story-viewer-loading {
   display: none; position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; z-index: 2; pointer-events: none;
@@ -7706,6 +7715,9 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
   </div>
   <iframe id="story-viewer-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
   <div id="story-viewer-loading" aria-hidden="true"></div>
+  <div id="sv-poster" aria-hidden="true"><div class="sv-poster-spin"></div></div>
+  <iframe id="sv-spare-1" class="sv-spare" tabindex="-1" aria-hidden="true" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+  <iframe id="sv-spare-2" class="sv-spare" tabindex="-1" aria-hidden="true" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
   <button id="story-ad-fab" type="button" onclick="nbStoryAdSkip()" aria-label="Skip ad" disabled>
     <svg class="ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-bg" cx="22" cy="22" r="19" fill="none" stroke-width="3"/><circle class="ring-fg" id="story-ad-ring" cx="22" cy="22" r="19" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="0"/></svg>
     <span id="story-ad-num"></span>
@@ -19287,6 +19299,10 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
+        swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay first media (this app)
+        embed-autoplay    Settings > Autoplay first media: the viewer starts the first video or audio on a page (this app and the Worker)
+        story-swipe       swiping sideways between stories in the viewer (strip, Subscribed, Liked, Published), next set loads past the strip's end (this app and the Worker)
+        online-check      the Back online toast waits until our service answers; if it can't connect it says so, keeps trying, and ends with Back online or a final notice (this app)
         library-nudges     reminders in a card at the top of Library > All: backup, storage, unpublished changes, settings left in an unusual state, free note limit, feature tips, and account news from the server (alerts, messages, notes not synced, subscriber and like growth, ad packages, Stripe setup, unspent views, invites), with a Reminders switch in Settings > Library (app only, no Worker change)
         page-duplicate-legal Privacy, Terms, Technical notes and the welcome page now cover the Let others duplicate my pages switch; Terms date 25 November 2026 (app, Worker LEGAL_DEFAULTS, TECH_NOTES, WELCOME_HTML, demo)
         placeholder-fit    admin field hints that were cut off at the end: the Reason hint is shorter and a long hint ends in an ellipsis (worker index.js and admin demo)
@@ -19351,6 +19367,93 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-25 22:20 | topics: swipe-setting | AI: Claude (app) | Switch for the note swipe, and Library reminders for it and for autoplay
+       Start state
+         The story swipe could not be turned off. No reminder mentioned the story swipe or Autoplay first media.
+       Work done
+         Setting storySwipe (Settings, after Floating page bar), on by default, kept on this phone. Off: no swipe context is made, and a viewer already open stops answering swipes (checked in _nbSwSetCtx and _nbSwMsg, so no Worker change). A phone that saved its settings earlier still gets the default, because load merges the defaults under what was saved.
+         Renamed after the first draft: the swipe works in the Stories strip, Subscribed, Liked and Published (not only stories), so it is called Swipe between notes (the key stays storySwipe). Reminders: a setting reminder when storySwipe was left off (NB_NUDGE_SETTINGS), and two feature tips after the Add to story tip: Swipe between stories (Try it opens the first story in the strip; needs 2 or more stories in the strip; ends once the person swipes, via _nbNudgeSeen('storySwipe') in _nbSwGo) and Autoplay in stories (Turn on switches the setting on; needs stories in the strip; ends once the setting is on or the tip was acted on). Both follow the usual spacing and repeat routine.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The stamps on the 22:12 autoplay entry and on the preload code were ahead of the real clock (22:45 and 22:20 written, the clock said about 22:19); they now read 22:12 and 22:02.
+       Found
+         The request said vertical swipe. The only swipe added is sideways, so the switch is for that one.
+       Important details
+         The tips only appear in Library > All with Reminders on, like every other reminder.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try: the switch off then a story (no slide), the switch turned off while a story is open, the off reminder, the two tips (Try it, Turn on) and that each stops when it should.
+       Depends on
+         Nothing new in the Worker.
+
+     SESSION 2026-11-25 22:12 | topics: embed-autoplay | AI: Claude (app) | Autoplay the first media when a page opens in the viewer
+       Start state
+         Nothing started on its own; every video or audio needed a tap.
+       Work done
+         Setting autoplayEmbed (Settings, after Floating page bar), off by default, kept on this phone. Worker: PLAY_SCRIPT in every served page's footer script. The page posts nb-autoplay when it has loaded; the app answers nb-autoplay-cfg on: true only for the viewer's own frame (not an ad, not a hidden neighbour frame, never the editor) and only when the setting is on. The page then starts the first video or audio tag it finds, or reloads the first YouTube, Streamable or Vimeo embed with autoplay=1 (and playsinline=1 for YouTube). A swipe that adopts a preloaded page sends the answer by hand (_nbAutoPlayMsg in _nbSwGo).
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Spotify and Instagram embeds have no autoplay switch, so they are skipped: the first embed that can autoplay starts, even when a Spotify or Instagram embed sits above it.
+       Important details
+         Sound is not muted. It relies on the Android WebView allowing media without a tap (Capacitor's default) and on the embed's allow list having autoplay. A page opened again (retry, hidden-page reload) autoplays again.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try: the setting off (nothing plays), on with a YouTube page, a Streamable page, a page with Spotify first then YouTube, a swipe to a page with a video, and the same page in the editor (must not play).
+       Depends on
+         Worker index.js with PLAY_SCRIPT. Deploy the Worker first; an old Worker simply never autoplays.
+
+     SESSION 2026-11-25 21:55 | topics: story-swipe | AI: Claude (app) | Swipe left or right between stories, carousel style
+       Start state
+         The viewer showed one page; the only ways to another were the page's chevrons (same author), the page list, and closing and tapping again.
+       Work done
+         Worker: SWIPE_SCRIPT is added to every served page's footer script. It watches one-finger drags and sends nb-sw (r ready, s start, m move, e end with dx and speed, c cancel) to the app, only after the app answers nb-sw-cfg on. A drag is left alone when it is mostly vertical, uses two fingers, or starts on an input, select, textarea, video, audio, canvas, iframe, a data-nb-noswipe element, or any scroller that can still scroll that way (the carousel block, tables, code). At a scroller's edge a new drag passes through to the story swipe.
+         Worker: GET /stories?exclude=slug,... gives the next set of up to 12 (same ordering, minus those slugs, no own stories) and every answer now carries more.
+         App: _nbSwCtx holds the list a story was opened from. Strip (markSeen true): the strip as shown, kept as one growing list, so back walks it in reverse across sets; the next set is fetched once the last two are reached and replaces the Library strip when its first story opens (your own stories are kept; the paint places them by the My stories setting, first, after unseen or after seen). Feed cards (src 'feed': Subscribed feed or liked, Published or stories): the live list, next page loaded ahead. Anything else gets no swiping (src 'nav': chevrons, page list, links inside a note; pasted link; Media).
+         App: the page follows the finger, the neighbour slides in from the side (the real page when it is already loaded, else a spinner panel #sv-poster), release past a third of the width or a flick opens the story (nbOpenStory src 'sw'); too short slides back. No story that way: it resists, springs back and shows a toast (You've reached the end, This is the first one, Loading more...). The header stays and changes when the new story opens.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Nothing.
+       Found
+         Strip swipes mark stories seen like a tap does. Swipes count toward the ad rhythm (every 3rd open), same as any open. Back from a note link or the page list restores the list it came from.
+       Important details
+         No spinner after a swipe: two hidden frames (#sv-spare-1, #sv-spare-2, _nbSwSlots) hold the next and previous story, loaded about 0.5 s after the open story settles, and only when /meta says the page is live and not switched off in Teams. On a committed swipe the ready frame takes the id story-viewer-frame, the old one becomes the neighbour behind it (so swiping back is instant too) and the far frame is reused for the next preload; the page gets its nb-sw and nav answers sent by hand because it missed them on load. Not ready, a due ad, or a hidden page: the spinner panel and a normal load, as before. Costs: three pages live at once and two extra page loads per swipe (the Worker counts no view for a page load; ad views are charged by the app).
+         Old Worker: no swipe at all (the page never sends nb-sw). Old app with the new Worker: nothing changes (it ignores nb-sw and the extra more field).
+         Constants: 0.33 of the width or speed above 0.4 px/ms to commit, 10 px before a drag counts, 240 ms animation, exclude capped at 200 slugs.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try: no spinner after a swipe either way, a page with embeds in the background, the like and subscribe buttons and comments after a swipe, strip (tap the third ring, swipe both ways, swipe past the last to load more, swipe back across the set boundary, close and check the strip), Subscribed and Liked (end of list), a page with a carousel (swipe inside it, then at its last slide), vertical scrolling, the page arrows, the left-edge Media swipe.
+       Depends on
+         Worker index.js with the nb-sw script and /stories exclude. Deploy the Worker first.
+
+     SESSION 2026-11-25 15:50 | topics: online-check | AI: Claude (app) | Back online toast with no connection to the service
+       Start state
+         The 10:25 session (library reminders, spacing). The online event showed Back online straight away, with nothing checking that the service could be reached, and nothing more was said if it could not.
+       Work done
+         The Back online toast now waits for a real answer from the service. First check 0.8 s after the event, then retries after 4, 8, 15, 30 and 30 s (each check gives up after 6 s). Answer: Back online. No answer: one notice (Your internet is back, but we can't connect yet. Trying again.), then Back online if a later check works, or a last notice (No connection. Try again in a moment., same shape as the other No connection toasts) after the final try. An offline event, or a newer online event, cancels the run.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         Back online showing when the phone had a data connection but the service could not be reached, with no follow up.
+       Found
+         The other online handlers (refresh the current view, reconnect jobs, sync, legal sync) still run on the event without waiting for this check. They have their own retries, so left alone.
+       Important details
+         The check is a HEAD request to the Worker's root with mode no-cors, so any reply counts as reachable even if the Worker sends no CORS headers for it. Rejected: a new health route (needs a Worker change) and the presence POST (needs a device id and counts as a visit).
+         Constants: _nbOnlineSeq, waits in the online handler, 6000 ms timeout in _nbServiceAnswers.
+       Removed
+         The one line handler that showed Back online on the online event.
+       Untested
+         Not run on a phone. Syntax checked only. Try: airplane mode off with Wi-Fi on a network with no internet, and a normal reconnect (should show Back online about a second later).
+       Depends on
+         Nothing in the Worker or admin demo.
 
      SESSION 2026-11-25 10:25 | topics: library-nudges | AI: Claude (app) | Spacing
        Start state
@@ -20743,6 +20846,30 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          Worker LEGAL_DEFAULTS and the admin demo LG_BUILTIN carry the same Privacy Policy words. The Worker now keeps a purchases table (see its Technical notes) and deletes it with the account.
        Final state
          Light classic shows white behind the bottom nav; the splash colour or picture runs under the bottom area until the launch sign-in screen is closed; the Privacy Policy matches what the Worker keeps.
+     ===================================================================== */
+
+  /* =====================================================================
+     SESSION 2026-11-25 ??:?? | topics: page-duplicate-wording | AI: Claude (app) | New canvas dialog wording fits your own pages too
+       Start state
+         The New canvas dialog (_nbAskNewCanvas, from the viewer's + and from Templates cards) ended with "It's still the author's work", which read wrongly on your own page.
+       Work done
+         The one line is now "If the page is someone else's, it's still their work, so please respect their rights." The rest of the dialog is unchanged. One wording for both cases, so nothing has to know who the author is. [2026-11-25 | page-duplicate-wording]
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The dialog no longer calls your own page "the author's work".
+       Found
+         Nothing.
+       Important details
+         Wording only: the title, the buttons, the free note limit check and the copy itself are as they were.
+       Removed
+         Nothing.
+       Untested
+         Not opened on a phone: open the dialog from your own page's + and from another author's page and from a Templates card, and check it reads right each time.
+       Depends on
+         Nothing.
+       Final state
+         One New canvas dialog wording that is true whoever made the page.
      ===================================================================== */
   function dzGet(block, k, def) { var v = block.dataset[k]; return (v === undefined || v === '') ? def : v; }
 
@@ -30896,10 +31023,35 @@ function hideStickyToast(msg) {
   _nbHideToastEl(t);
 }
 
-// Lets the person know every time the connection returns, so a sheet or
-// screen that just refreshed itself (Publish to Web / Publish as Ad, embed
-// retries) doesn't seem to change on its own without explanation.
-window.addEventListener('online', () => showToast('Back online'));
+// Lets the person know when the connection returns, so a sheet or screen that just refreshed itself (Publish to Web /
+// Publish as Ad, embed retries) doesn't seem to change on its own without explanation.
+// [2026-11-25 15:50 | online-check] changed: 'Back online' now shows only once our service answers. The phone saying it is online is not enough (a weak signal or a sign-in page still counts), so we check first, tell the person if it can't connect yet, keep trying for a while, and say 'Back online' when it works.
+let _nbOnlineSeq = 0;
+function _nbServiceAnswers() {
+  // mode no-cors: any answer from the service counts (even an error page); only a dead or blocked connection fails.
+  return _nbFetchTimeout(NB_PUBLISH_API.replace(/\/$/, '') + '/', { method: 'HEAD', mode: 'no-cors', cache: 'no-store' }, 6000).then(() => true, () => false);
+}
+window.addEventListener('online', () => {
+  const seq = ++_nbOnlineSeq; // a newer online or offline event cancels this run
+  const waits = [800, 4000, 8000, 15000, 30000, 30000]; // the event can fire early, so the first check waits a moment
+  let told = false;
+  const stale = () => seq !== _nbOnlineSeq || (typeof navigator !== 'undefined' && navigator.onLine === false);
+  (function attempt(i) {
+    setTimeout(async () => {
+      if (stale()) return;
+      const ok = await _nbServiceAnswers();
+      if (stale()) return;
+      if (ok) { showToast('Back online'); return; }
+      if (i + 1 < waits.length) {
+        if (!told) { told = true; showToast('Your internet is back, but we can\u2019t connect yet. Trying again.'); }
+        attempt(i + 1);
+      } else {
+        showToast('No connection. Try again in a moment.');
+      }
+    }, waits[i]);
+  })(0);
+});
+window.addEventListener('offline', () => { _nbOnlineSeq++; });
 
 /* ===================== Theme ===================== */
 const DK = 'nb_theme_v1';
@@ -30982,7 +31134,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
   // [2026-11-13 14:27 | pause-bg] changed: Pause moving background is on by default (pauseSweep: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-03 08:38 | floating-nav] [2026-11-04 17:52 | floating-nav] changed: Floating page arrows is on by default (floatPageNav: true). A phone that already saved the setting keeps its own choice.
   // [2026-11-24 13:45 | eye-care] Eye care is off by default (eyeCare: false).
-  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, eyeCare: false, mediaSwipe: true, floatPageNav: true, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false, nudges: true };
+  const DEF = { sort: 'default', images: true, stories: true, myStories: 'first', tips: true, startOn: 'library', confirmDelete: true, resetSource: 'saved', syncEvery: 20, reduceMotion: null, glassMode: true, pauseSweep: true, eyeCare: false, mediaSwipe: true, floatPageNav: true, storySwipe: true, autoplayEmbed: false, hideDashes: false, hideLibCount: false, hideMdCount: false, maskEmail: false, msgAlways: false, nudges: true };
   let S = null, lastPoll = 0;
   function load() {
     try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { S = Object.assign({}, DEF); }
@@ -31059,6 +31211,10 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'sw', k: 'reduceMotion', l: 'Reduce motion', s: 'Fewer animations and transitions. Starts on if your phone has animations turned off.' },
       // [2026-11-03 08:38 | floating-nav] Reader setting, kept on this phone. Sent to a published page with the arrows message (nb-nav float).
       { t: 'sw', k: 'floatPageNav', l: 'Floating page bar', s: 'Show the previous and next arrows, the list button and, on pages whose author allows copies, the + duplicate button as a see-through bar at the bottom of the page, next to the comments button, instead of under the page. The bar fades away when you stop scrolling.' },
+      // [2026-11-25 22:20 | swipe-setting] Reader setting, kept on this phone. Turns the sideways swipe between stories in the viewer on or off.
+      { t: 'sw', k: 'storySwipe', l: 'Swipe between notes', s: 'In the viewer, swipe left or right to go to the next or previous note. It follows the Stories strip, Subscribed, Liked and Published, in the order shown. A carousel, table or video on the page still takes its own swipes. Turn off if swipes get in the way.' },
+      // [2026-11-25 22:12 | embed-autoplay] Reader setting, kept on this phone. Off by default. Only for pages opened in the viewer (never the editor): the page asks (nb-autoplay) and the answer carries the setting (see _nbAutoPlayMsg).
+      { t: 'sw', k: 'autoplayEmbed', l: 'Autoplay first media', s: 'When a page opens in the viewer, start the first video or audio on it (YouTube, Streamable, Vimeo, or a video or audio file). Pages in the editor never autoplay. Spotify and Instagram can\u2019t be started this way.' },
       { t: 'sw', k: 'hideDashes', l: 'Hide Media sidebar icon', s: 'Hide the sidebar icon at the left of the Library screen\u2019s header, next to the title. Tapping the Library title still opens Media.' }]],
     ['Library', [
       { t: 'chips', k: 'sort', l: 'Sort notes', o: [['default', 'Default'], ['edited', 'Recently edited'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['az', 'A\u2013Z']] },
@@ -32277,8 +32433,8 @@ function _nbTryOpenNoteLink(url) {
   // Tapped from inside an open note: remember it so back returns here (only once the new note really opens).
   const ov = document.getElementById('story-viewer-overlay');
   const prev = (ov && ov.classList.contains('open') && !_nbStoryAd && _nbCurrentStorySlug && _nbCurrentStorySlug !== slug)
-    ? { slug: _nbCurrentStorySlug, authorSub: _nbCurrentStoryAuthorSub || '', title: '' } : null;
-  _nbOpenStoryBySlug(slug).then(ok => {
+    ? { slug: _nbCurrentStorySlug, authorSub: _nbCurrentStoryAuthorSub || '', title: '', ctx: _nbSwCtx } : null;
+  _nbOpenStoryBySlug(slug, { src: 'nav' }).then(ok => {
     if (ok && prev) _nbStoryBackStack.push(prev);
   }).catch(e => _nbLog('note link history', e));
   return true;
@@ -37112,7 +37268,7 @@ function _nbOpenVersionView(v, html, pageBlob) {
   const ov = document.getElementById('story-viewer-overlay'), fr = document.getElementById('story-viewer-frame'), hdr = document.getElementById('story-viewer-header');
   const titleEl = document.getElementById('story-viewer-title'), inner = document.getElementById('story-viewer-title-text');
   _nbStoryAdReset(); _nbStoryRetryStop();
-  _nbStoryCommentsOpen = false; _nbStoryBackStack = []; _nbCurrentStorySlug = null; _nbCurrentStoryAuthorSub = null; // no slug: the comments / like / follow hooks all stay idle
+  _nbStoryCommentsOpen = false; _nbStoryBackStack = []; _nbSwCtx = null; _nbCurrentStorySlug = null; _nbCurrentStoryAuthorSub = null; // no slug: the comments / like / follow hooks all stay idle
   _pubTeamsPrevV = v;
   inner.textContent = _pubTeamsVerWhen(v); nbUpdateTitleMarquee(titleEl, inner, true);
   hdr.classList.remove('has-actions', 'like-only', 'has-tick');
@@ -38399,6 +38555,7 @@ function _nbStoryRevealFrame(force) {
   const fr = document.getElementById('story-viewer-frame'), ov = document.getElementById('story-viewer-overlay');
   if (fr) fr.classList.remove('sv-loading');
   if (ov) ov.classList.remove('sv-loading-on');
+  if (_nbSwCtx) _nbSwPreloadSoon(); // [2026-11-25 22:02 | story-swipe] the open story has settled: load its neighbours
 }
 function _nbStoryHoldFrame() {
   const fr = document.getElementById('story-viewer-frame'), ov = document.getElementById('story-viewer-overlay');
@@ -38406,7 +38563,7 @@ function _nbStoryHoldFrame() {
   if (!fr._svWired) {
     fr._svWired = true;
     fr.addEventListener('load', () => {
-      if (!_nbCurrentStorySlug) return; // the blank page after closing
+      if (!_nbCurrentStorySlug || fr.id !== 'story-viewer-frame') return; // the blank page after closing; a hidden neighbour frame loading
       clearTimeout(_nbStorySettleTimer);
       _nbStorySettleTimer = setTimeout(_nbStoryRevealFrame, NB_STORY_SETTLE_MS);
     });
@@ -38494,10 +38651,246 @@ function _nbStoryAdForOpen(slug, authorSub) {
   if (!ad && st.n >= NB_STORY_AD_EVERY - 1) _nbStoryAdPrefetch(); // line one up for the next open
   return ad;
 }
-function nbOpenStory(slug, authorSub, title, markSeen) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
+// [2026-11-25 21:55 | story-swipe] Swiping sideways between stories in the viewer, carousel style: the page follows the finger, the next or previous
+// story slides in, and a release past a third of the width (or a quick flick) opens it. What swipes through depends on where the story was opened:
+//  - the Library strip (_nbSwCtx.kind 'strip'): the strip as it was on screen, in that order. Past its end the next set comes from GET /stories?exclude=...
+//    (fetched ahead, once the last two are reached) and replaces the strip on the Library screen. items keeps everything shown, so swiping back
+//    walks the same order in reverse, across sets.
+//  - Subscribed (feed, liked) and Published (published, stories): the list as it stands on the Notes screen (read live, so pages that loaded
+//    since are included; the next page loads ahead). Its end bounces back with a toast.
+//  - anything else (pasted link, Media, a chevron or the page list inside the viewer): no swiping.
+// The page (see SWIPE_SCRIPT in the Worker) sends the drag. The neighbour that slides in is the real page when it is already loaded in a hidden frame
+// (see _nbSwSlots), otherwise a spinner panel (#sv-poster). The header stays where it is and changes when the new story opens.
+// [2026-11-25 22:12 | embed-autoplay] The viewer's page asks once it has loaded; with Settings > Autoplay first media on, the answer tells it to start its first video or audio. Only the viewer's own frame is answered (not an ad, not a hidden neighbour frame), so the editor never autoplays.
+function _nbAutoPlayMsg(src) {
+  if (!_nbStoryNavFrameOk(src) || !window._nbSt('autoplayEmbed')) return;
+  try { src.postMessage({ type: 'nb-autoplay-cfg', on: true }, '*'); } catch (e) {}
+}
+let _nbSwCtx = null; // { kind: 'strip', items, pos, more, batch, batchRaw, fetching } | { kind: 'feed', tab }
+const _nbSwG = { on: false, dir: 0, item: null, w: 0, busy: false, tok: 0, toasted: false };
+function _nbSwItem(s) { return { slug: s.slug, authorSub: s.authorSub || '', title: s.title || '' }; }
+function _nbSwFeedList() { return (_nbSubFeedStories || []).filter(s => s && s.slug && !/^alert:/.test(s.slug) && _nbSubStoryMatches(s)); }
+function _nbSwSetCtx(slug, markSeen, src) {
+  if (src === 'sw') return; // a swipe keeps the context it moved
+  if (!window._nbSt('storySwipe')) { _nbSwSlotsClear(); _nbSwCtx = null; return; } // [2026-11-25 22:20 | swipe-setting] Settings > Swipe between stories is off
+  _nbSwSlotsClear(); // any other open starts a new list: whatever was preloaded belonged to the old one
+  if (src === 'nav') { _nbSwCtx = null; return; }
+  let c = null;
+  if (markSeen === true) { // only the strip marks a story seen
+    const items = _nbStoriesCache.map(_nbSwItem), i = items.findIndex(x => x.slug === slug);
+    if (i >= 0) c = { kind: 'strip', items: items, pos: i, more: true, batch: null, batchRaw: null, fetching: false };
+  } else if (src === 'feed') {
+    const k = _nbFeedKind();
+    if (_nbIsFeedCat(_nbActiveCat) && (k === 'feed' || k === 'liked' || k === 'published' || k === 'stories') && _nbSwFeedList().some(s => s.slug === slug)) c = { kind: 'feed', tab: k };
+  }
+  _nbSwCtx = c;
+}
+// The next set (strip) or page (feed) is fetched while the last two are on screen, so a swipe past the end finds it ready.
+function _nbSwAfterOpen() {
+  const c = _nbSwCtx;
+  if (!c) return;
+  if (c.kind === 'feed') {
+    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === _nbCurrentStorySlug);
+    if (i >= 0 && i >= L.length - 2 && !_nbSubFeedDone && !_nbSubFeedLoading) _nbLoadSubFeedPage();
+  } else if (c.pos >= c.items.length - 2) _nbSwFetchMore();
+}
+async function _nbSwFetchMore() {
+  const c = _nbSwCtx;
+  if (!c || c.kind !== 'strip' || !c.more || c.fetching || c.batch || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  c.fetching = true;
+  try {
+    const headers = {};
+    if (nbIsSignedIn()) headers['Authorization'] = 'Bearer ' + nbSessionToken();
+    const ex = c.items.map(x => x.slug).slice(-190).join(',');
+    const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/stories?exclude=' + encodeURIComponent(ex), { headers });
+    if (!res.ok) throw new Error('more stories ' + res.status);
+    const d = await res.json();
+    if (_nbSwCtx !== c) return;
+    const shown = new Set(c.items.map(x => x.slug)); // an older Worker ignores exclude and repeats the first set: those are dropped here
+    const raw = ((d && d.stories) || []).filter(s => s && s.slug && !shown.has(s.slug));
+    if (raw.length) { c.batchRaw = raw; c.batch = raw.map(_nbSwItem); }
+    c.more = raw.length > 0 && !(d && d.more === false);
+  } catch (e) { _nbLog('more stories', e); } // c.more stays true: the next time the last story shows, it tries again
+  finally { c.fetching = false; }
+}
+function _nbSwPeek(dir) { // the story a swipe in this direction would open (dir 1 next, -1 previous), or null
+  const c = _nbSwCtx;
+  if (!c) return null;
+  if (c.kind === 'feed') {
+    if (_nbFeedKind() !== c.tab) return null;
+    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === _nbCurrentStorySlug);
+    return (i >= 0 && L[i + dir]) ? _nbSwItem(L[i + dir]) : null;
+  }
+  if (c.items[c.pos + dir]) return c.items[c.pos + dir];
+  return (dir > 0 && c.batch && c.batch.length) ? c.batch[0] : null;
+}
+function _nbSwGo(dir, item, adopted) {
+  const c = _nbSwCtx;
+  try { _nbNudgeSeen('storySwipe'); } catch (e) {} // [2026-11-25 22:20 | swipe-setting] they have swiped: the Library tip about it stops
+  if (c && c.kind === 'strip') {
+    if (!c.items[c.pos + dir] && dir > 0 && c.batch) { // first story of the next set: the Library strip takes the new set (your own stories are kept and _nbPaintStoriesStrip places them by the My stories setting)
+      const mine = _nbStoriesCache.filter(x => _nbIsOwnAuthor(x.authorSub) || _nbMyPublishedSlugs().has(x.slug));
+      _nbStoriesCache = mine.concat(_nbApplyStoryOverrides(c.batchRaw));
+      c.items = c.items.concat(c.batch); c.batch = null; c.batchRaw = null;
+      try { _nbPaintStoriesStrip(); } catch (e) { _nbLog('swipe strip', e); }
+    }
+    c.pos += dir;
+  }
+  nbOpenStory(item.slug, item.authorSub, item.title, !!(c && c.kind === 'strip'), 'sw');
+  if (adopted) { // the page was already loaded in the hidden frame: it missed the answers a page gets on load, so they are sent now
+    const w = document.getElementById('story-viewer-frame').contentWindow;
+    if (w) { _nbSwMsg(w, { p: 'r' }); _nbStoryNavSend(w); _nbAutoPlayMsg(w); } // a preloaded page asked while it was hidden, so it is answered now
+    _nbSwPreloadSoon();
+  }
+}
+// The neighbours are kept loaded in two hidden frames (_nbSwSlots n and p) once the open story has settled, so a swipe slides in the real page and
+// nothing flashes after it. A neighbour is only loaded when /meta says the page is live and not switched off in Teams (those fall back to the spinner
+// panel). On a committed swipe the hidden frame becomes the viewer's frame (they swap ids) and the old one becomes the neighbour behind it; the frame on
+// the far side is reused for the next preload. If the neighbour was not ready, the panel slides in and the page loads after, as before.
+const _nbSwSlots = { n: { fr: null, slug: null, ready: false, t: 0 }, p: { fr: null, slug: null, ready: false, t: 0 } };
+let _nbSwAdopt = false, _nbSwPreTimer = 0;
+function _nbSwSlotInit() {
+  const S = _nbSwSlots;
+  if (!S.n.fr) {
+    S.n.fr = document.getElementById('sv-spare-1'); S.p.fr = document.getElementById('sv-spare-2');
+    S.n.fr._svSlot = S.n; S.p.fr._svSlot = S.p;
+    [S.n.fr, S.p.fr].forEach(fr => fr.addEventListener('load', () => {
+      const sl = fr._svSlot; if (!sl || !sl.slug) return;
+      clearTimeout(sl.t); const sg = sl.slug;
+      sl.t = setTimeout(() => { if (sl.slug === sg) sl.ready = true; }, 1200); // or earlier, when the page says its layout settled (nb-page-ready)
+    }));
+  }
+  return S;
+}
+function _nbSwSlotClear(sl) {
+  if (!sl) return;
+  clearTimeout(sl.t); sl.slug = null; sl.ready = false;
+  const a = sl.fr && sl.fr.getAttribute('src');
+  if (a && a !== 'about:blank') sl.fr.src = 'about:blank';
+}
+function _nbSwSlotsClear() { if (_nbSwSlots.n.fr) { _nbSwSlotClear(_nbSwSlots.n); _nbSwSlotClear(_nbSwSlots.p); } }
+function _nbSwPageReady(src) { const S = _nbSwSlots; [S.n, S.p].forEach(sl => { if (sl.fr && sl.slug && sl.fr.contentWindow === src) sl.ready = true; }); }
+function _nbSwPreloadSoon() { clearTimeout(_nbSwPreTimer); _nbSwPreTimer = setTimeout(_nbSwPreload, 500); }
+async function _nbSwPreload() {
+  const c = _nbSwCtx, ov = document.getElementById('story-viewer-overlay'), main = document.getElementById('story-viewer-frame');
+  if (!c || _nbStoryAd || _nbSwG.busy || !_nbCurrentStorySlug || !ov.classList.contains('open') || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  const S = _nbSwSlotInit();
+  ov.style.setProperty('--sv-frt', main.offsetTop + 'px');
+  for (const pair of [[1, S.n], [-1, S.p]]) {
+    const dir = pair[0], sl = pair[1], it = _nbSwPeek(dir);
+    if (!it) { _nbSwSlotClear(sl); continue; }
+    if (sl.slug === it.slug) continue;
+    _nbSwSlotClear(sl); sl.slug = it.slug;
+    const slug = it.slug;
+    try {
+      const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug));
+      if (_nbSwCtx !== c || sl.slug !== slug) continue;
+      const d = res.ok ? await res.json() : null;
+      if (_nbSwCtx !== c || sl.slug !== slug) continue;
+      if (!d || !d.found || d.hidden) { sl.slug = null; continue; } // not live, or only for the team: no preload, the panel is used
+      sl.fr.src = _nbViewerUrl(slug);
+    } catch (e) { if (sl.slug === slug) sl.slug = null; }
+  }
+}
+function _nbSwRotate(dir, slIn) { // the ready frame of slot slIn becomes the viewer frame; the old one goes behind it
+  const S = _nbSwSlots, slFar = slIn === S.n ? S.p : S.n, main = document.getElementById('story-viewer-frame'), inc = slIn.fr, oldSlug = _nbCurrentStorySlug;
+  main.id = ''; main.classList.add('sv-spare');
+  inc.classList.remove('sv-spare'); inc.id = 'story-viewer-frame'; inc._svSlot = null;
+  const farFr = slFar.fr;
+  slIn.fr = farFr; farFr._svSlot = slIn; slIn.slug = null; slIn.ready = false; clearTimeout(slIn.t);
+  if (farFr.getAttribute('src') && farFr.getAttribute('src') !== 'about:blank') farFr.src = 'about:blank';
+  slFar.fr = main; main._svSlot = slFar; slFar.slug = oldSlug; slFar.ready = true; clearTimeout(slFar.t);
+  [main, inc].forEach(f => { f.style.transition = 'none'; f.style.transform = ''; f.style.visibility = ''; });
+}
+function _nbSwEls() { return { ov: document.getElementById('story-viewer-overlay'), fr: document.getElementById('story-viewer-frame'), po: document.getElementById('sv-poster') }; }
+function _nbSwReset() { // viewer closing, or anything else that must drop a half-made swipe
+  _nbSwG.on = false; _nbSwG.busy = false; _nbSwG.tok++; clearTimeout(_nbSwPreTimer);
+  const e = _nbSwEls();
+  if (e.fr) { e.fr.style.transition = ''; e.fr.style.transform = ''; }
+  if (e.po) { e.po.style.transition = ''; e.po.style.transform = ''; e.po.style.display = 'none'; }
+  const S = _nbSwSlots;
+  [S.n, S.p].forEach(sl => { if (sl.fr) { sl.fr.style.transition = ''; sl.fr.style.transform = ''; sl.fr.style.visibility = ''; } });
+  _nbSwSlotsClear();
+}
+function _nbSwMsg(src, m) {
+  if (!_nbStoryNavFrameOk(src)) { const mf = document.getElementById('story-viewer-frame'); if (_nbSwG.on && mf && src === mf.contentWindow) _nbSwReset(); return; } // a hidden neighbour frame's messages are ignored
+  if (m.p === 'r') { try { src.postMessage({ type: 'nb-sw-cfg', on: !!_nbSwCtx && !!window._nbSt('storySwipe') }, '*'); } catch (x) {} return; }
+  if (!_nbSwCtx || _nbSwG.busy || !window._nbSt('storySwipe')) return; // [2026-11-25 22:20 | swipe-setting] switched off while the viewer is open: no more swipes
+  const g = _nbSwG, e = _nbSwEls(), x = Number(m.x) || 0, S = _nbSwSlots;
+  const inEl = () => g.pre ? g.pre.fr : e.po; // what slides in: the loaded neighbour, or the spinner panel
+  if (m.p === 's') {
+    g.on = true; g.dir = 0; g.item = null; g.pre = null; g.w = e.fr.clientWidth || window.innerWidth;
+    e.po.style.top = e.fr.offsetTop + 'px';
+    e.po.firstElementChild.style.top = Math.max(0, e.ov.clientHeight / 2 - 23 - e.fr.offsetTop) + 'px'; // the spinner sits where the loading spinner does
+    e.ov.style.setProperty('--sv-frt', e.fr.offsetTop + 'px');
+    e.fr.style.transition = 'none'; e.po.style.transition = 'none';
+    return;
+  }
+  if (!g.on) return;
+  const dirOf = v => v < 0 ? 1 : v > 0 ? -1 : 0;
+  const aim = d => {
+    if (g.pre) { g.pre.fr.style.visibility = ''; g.pre.fr.style.transform = ''; }
+    e.po.style.display = 'none';
+    g.dir = d; g.item = d ? _nbSwPeek(d) : null; g.pre = null;
+    if (!g.item) return;
+    const sl = d > 0 ? S.n : S.p;
+    if (sl.fr && sl.ready && sl.slug === g.item.slug) { g.pre = sl; sl.fr.style.transition = 'none'; sl.fr.style.visibility = 'visible'; }
+    else e.po.style.display = 'flex';
+  };
+  if (m.p === 'm') {
+    if (dirOf(x) !== g.dir) aim(dirOf(x));
+    const px = Math.max(-g.w, Math.min(g.w, (g.item || !g.dir) ? x : x * 0.3)); // no story that way: it resists
+    e.fr.style.transform = 'translateX(' + px + 'px)';
+    if (g.item) inEl().style.transform = 'translateX(' + (px + (g.dir > 0 ? g.w : -g.w)) + 'px)';
+    return;
+  }
+  if (m.p === 'e' || m.p === 'c') {
+    g.on = false;
+    if (m.p === 'e' && dirOf(x) !== g.dir) aim(dirOf(x));
+    const v = Number(m.v) || 0, far = Math.abs(x) > g.w * 0.33, flick = Math.abs(v) > 0.4 && Math.abs(x) > 30 && (v < 0) === (x < 0);
+    const tr = 'transform .22s ease-out';
+    e.fr.style.transition = tr; e.po.style.transition = tr; if (g.pre) g.pre.fr.style.transition = tr;
+    if (m.p === 'e' && g.item && (far || flick)) {
+      g.busy = true; const tok = ++g.tok, dir = g.dir, item = g.item, c = _nbSwCtx, pre = g.pre;
+      e.fr.style.transform = 'translateX(' + (-dir * g.w) + 'px)'; inEl().style.transform = 'translateX(0px)';
+      setTimeout(() => {
+        if (tok !== g.tok || c !== _nbSwCtx || !e.ov.classList.contains('open')) return; // closed or moved on meanwhile (_nbSwReset already cleaned up)
+        if (pre && pre.ready && pre.slug === item.slug) { _nbSwRotate(dir, pre); _nbSwAdopt = true; _nbSwGo(dir, item, true); }
+        else {
+          _nbSwSlotsClear(); // what was loaded no longer sits next to the story that opens
+          _nbSwGo(dir, item); // opens the story first (that hides the old page), then the panels are put back
+          e.fr.style.transition = 'none'; e.fr.style.transform = '';
+          if (pre) { pre.fr.style.transition = 'none'; pre.fr.style.transform = ''; pre.fr.style.visibility = ''; }
+        }
+        e.po.style.transition = 'none'; e.po.style.transform = ''; e.po.style.display = 'none';
+        g.busy = false;
+      }, 240);
+      return;
+    }
+    if (m.p === 'e' && !g.item && g.dir && Math.abs(x) > g.w * 0.15) { // nothing that way
+      const c = _nbSwCtx;
+      let msg = g.dir > 0 ? 'You\u2019ve reached the end' : 'This is the first one';
+      if (g.dir > 0 && c.kind === 'strip' && c.more) { msg = 'Loading more\u2026'; _nbSwFetchMore(); }
+      else if (g.dir > 0 && c.kind === 'feed' && !_nbSubFeedDone) { msg = 'Loading more\u2026'; if (!_nbSubFeedLoading) _nbLoadSubFeedPage(); }
+      showToast(msg);
+    }
+    e.fr.style.transform = 'translateX(0px)';
+    if (g.item) inEl().style.transform = 'translateX(' + (g.dir > 0 ? g.w : -g.w) + 'px)';
+    const tok = ++g.tok, pre = g.pre;
+    setTimeout(() => {
+      if (tok !== g.tok || g.busy) return;
+      e.po.style.display = 'none'; e.fr.style.transition = '';
+      if (pre) { pre.fr.style.visibility = ''; pre.fr.style.transition = ''; pre.fr.style.transform = ''; }
+    }, 240);
+  }
+}
+// [2026-11-25 21:55 | story-swipe] changed: src says how this open came about: 'sw' a swipe (keeps its list), 'nav' a chevron or the page list inside the viewer (no swiping for that story), 'feed' a card in Subscribed or Published; no src: the strip when markSeen is true, otherwise no swiping.
+function nbOpenStory(slug, authorSub, title, markSeen, src) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
+  _nbSwSetCtx(slug, markSeen, src);
   const ad = _nbStoryAdForOpen(slug, authorSub);
-  if (ad) _nbStoryAdOpen(ad, { slug, authorSub, title, markSeen });
+  if (ad) { _nbSwAdopt = false; _nbStoryAdOpen(ad, { slug, authorSub, title, markSeen }); }
   else _nbOpenStoryNow(slug, authorSub, title, markSeen);
+  _nbSwAfterOpen();
 }
 function _nbStoryAdOpen(ad, pending) {
   _nbStoryRetryStop();
@@ -38588,6 +38981,7 @@ function _nbStoryAdReset() {
   document.getElementById('story-ad-num').textContent = '';
 }
 function _nbOpenStoryNow(slug, authorSub, title, markSeen) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
+  const _adopt = _nbSwAdopt; _nbSwAdopt = false; // [2026-11-25 22:02 | story-swipe] a swipe whose page is already loaded in the frame: no reload, no spinner
   _nbStoryAdReset();
   _nbStoryRetryStop();
   _nbStoryCommentsOpen = false;
@@ -38599,9 +38993,9 @@ function _nbOpenStoryNow(slug, authorSub, title, markSeen) { // markSeen: only a
   storyTitleInner.textContent = '@' + slug;
   nbUpdateTitleMarquee(storyTitleEl, storyTitleInner, true);
   _nbStoryTick(slug);
-  _nbStoryHoldFrame();
-  _nbStoryMetaGate = (nbIsSignedIn() && !/[?&]t=/.test(_nbViewerUrl(slug))) ? slug : null; // [2026-11-03 ??:?? | discoverable-setting] see _nbStoryMetaGate
-  document.getElementById('story-viewer-frame').src = _nbViewerUrl(slug);
+  if (_adopt) _nbStoryRevealFrame(true); else _nbStoryHoldFrame();
+  _nbStoryMetaGate = _adopt ? null : (nbIsSignedIn() && !/[?&]t=/.test(_nbViewerUrl(slug))) ? slug : null; // [2026-11-03 ??:?? | discoverable-setting] see _nbStoryMetaGate
+  if (!_adopt) document.getElementById('story-viewer-frame').src = _nbViewerUrl(slug);
   const subBtn = document.getElementById('story-viewer-sub-btn');
   const isSubscribed = _nbSubscribedAuthors().has(authorSub);
   _nbSetSubBtnState(subBtn, isSubscribed);
@@ -38758,7 +39152,7 @@ function _nbStoryNavGo(src, dir) {
   if (!_nbStoryNavFrameOk(src)) return;
   const d = _nbStoryNavData, t = d && d.slug === _nbCurrentStorySlug ? (dir === 'prev' ? d.prev : dir === 'next' ? d.next : null) : null;
   if (!t) return;
-  nbOpenStory(t.slug, _nbCurrentStoryAuthorSub, t.title || '', false);
+  nbOpenStory(t.slug, _nbCurrentStoryAuthorSub, t.title || '', false, 'nav');
 }
 // [2026-11-25 | page-duplicate] The + beside the list button (shown when the page's author allows copies, setting "Let others duplicate my pages"; the answer from /author-nav carries dup).
 // A tap comes back as nb-nav-dup. It asks on the same dialog as the editor's \"+\" (New canvas) with the wording adapted, then rebuilds the live page as a new note of the person's own
@@ -38775,7 +39169,7 @@ function _nbAskNewCanvas(slug, fromViewer) {
   if (nbAtFreeNoteLimit()) { if (fromViewer) document.getElementById('paywall-overlay').classList.add('over-viewer'); openPaywallDialog(); return; }
   const ov = document.getElementById('edit-reset-overlay');
   document.getElementById('edit-reset-title').textContent = 'Start a new canvas?';
-  document.getElementById('edit-reset-body').textContent = 'A copy of this page will open in the editor as a new canvas of your own. The original page isn\u2019t changed. It\u2019s still the author\u2019s work, so please respect their rights.';
+  document.getElementById('edit-reset-body').textContent = 'A copy of this page will open in the editor as a new canvas of your own. The original page isn\u2019t changed. If the page is someone else\u2019s, it\u2019s still their work, so please respect their rights.';
   document.getElementById('edit-reset-confirm').textContent = 'New canvas';
   const shut = () => ov.classList.remove('open', 'over-viewer'); // over-viewer lifts the dialog above the page viewer
   if (fromViewer) ov.classList.add('open', 'over-viewer'); else { ov.classList.remove('over-viewer'); ov.classList.add('open'); }
@@ -39061,10 +39455,10 @@ function nbAuthorPagesPick(slug, authorSub, title) {
   if (!slug || slug === cur) return;
   const ov = document.getElementById('story-viewer-overlay');
   if (ov && ov.classList.contains('open') && !_nbStoryAd && cur) {
-    _nbStoryBackStack.push({ slug: cur, authorSub: _nbCurrentStoryAuthorSub || '', title: '' });
+    _nbStoryBackStack.push({ slug: cur, authorSub: _nbCurrentStoryAuthorSub || '', title: '', ctx: _nbSwCtx });
     if (_nbStoryBackStack.length > 30) _nbStoryBackStack.shift();
   }
-  nbOpenStory(slug, authorSub, title || '', false);
+  nbOpenStory(slug, authorSub, title || '', false, 'nav');
 }
 function _nbCheckStoryReachable(slug) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -39106,6 +39500,7 @@ function nbStoryBack() {
   }
   if (_nbStoryBackStack.length) { // opened from a link in another note: go back to that note first
     const prev = _nbStoryBackStack.pop();
+    _nbSwCtx = prev.ctx || null; // the list it came from swipes again
     _nbOpenStoryNow(prev.slug, prev.authorSub, prev.title);
     return;
   }
@@ -39115,6 +39510,7 @@ function nbCloseStory() {
   nbAuthorPagesClose(); // [2026-11-03 04:24 | page-list]
   _nbVersionViewEnd();
   _nbStoryBackStack = [];
+  _nbSwCtx = null; _nbSwReset(); // [2026-11-25 21:55 | story-swipe]
   _nbStoryAdReset();
   const _ov = document.getElementById('story-viewer-overlay');
   const _wasOverMedia = _ov.classList.contains('over-media');
@@ -40996,7 +41392,7 @@ function _nbSubCardHtmlRaw(s) {
   const showAuthor = s.authorProfileName && _nbActiveCat !== 'Published'; // your own notes don't need your name on them
   // Same action buttons as a normal card, wired to the local copy (none if that note hasn't synced to this device yet).
   // Your own notes open in the editor (like a card in All); the story viewer is the fallback if the local copy isn't on this device.
-  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : _nbFeedKind() === 'templates' ? `nbTemplateTap('${sid}')` : `nbOpenStoryChecked('${sid}','${asub}','${title}')`; // [2026-11-25 | templates] a template card asks New canvas, then opens the copy in the editor
+  const open = own ? `nbOpenNoteForEdit('${escJs(own.id)}')` : _nbFeedKind() === 'templates' ? `nbTemplateTap('${sid}')` : `nbOpenStoryChecked('${sid}','${asub}','${title}',false,'feed')`; // [2026-11-25 | templates] [2026-11-25 21:55 | story-swipe] changed: 'feed' lets the viewer swipe through this list; a template card asks New canvas, then opens the copy in the editor
   return `
       <div class="guide-card" data-slug="${esc(s.slug)}" onclick="${open}" role="button" tabindex="0" onkeydown="if (event.key==='Enter') { ${open} }">
         ${showAuthor ? `<span class="gc-author-name">${esc(s.authorProfileName)}${s.verified ? _NB_VERIFIED_TICK : (s.verifiedProfile ? _NB_VERIFIED_PROFILE_TICK : '')}</span>` : ''}
@@ -44402,12 +44798,12 @@ async function _nbOpenStoryBySlug(slug, opts) {
       }
       if (!ok) { showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); return false; }
     }
-    nbOpenStory(data.slug || slug, data.authorSub || (cached && cached.authorSub) || '', data.title || (cached && cached.title) || '', opts.markSeen);
+    nbOpenStory(data.slug || slug, data.authorSub || (cached && cached.authorSub) || '', data.title || (cached && cached.title) || '', opts.markSeen, opts.src);
     _nbApplyStoryMeta(data.slug || slug, data); // already known here: a note with no author never shows Subscribe, not even for the moment before the reachability check lands
     return true;
   } catch (e) {
     _nbLog('note link open', e);
-    if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || '', opts.markSeen); return true; } // no answer from the Worker: the cached copy opens (see the stamp above)
+    if (cached) { nbOpenStory(cached.slug, cached.authorSub || '', cached.title || '', opts.markSeen, opts.src); return true; } // no answer from the Worker: the cached copy opens (see the stamp above)
     showToast((opts.failMsg || 'Couldn\u2019t open that link') + _nbFailureReason(e));
     return false;
   } finally {
@@ -44415,8 +44811,8 @@ async function _nbOpenStoryBySlug(slug, opts) {
   }
 }
 // Card / strip / media opens: same /meta check as a pasted link, so a note switched off in Teams shows the toast and never the viewer.
-function nbOpenStoryChecked(slug, authorSub, title, markSeen) {
-  return _nbOpenStoryBySlug(slug, { authorSub: authorSub, title: title, markSeen: markSeen, notFound: 'That note isn\u2019t available anymore', failMsg: 'Couldn\u2019t open that note' });
+function nbOpenStoryChecked(slug, authorSub, title, markSeen, src) {
+  return _nbOpenStoryBySlug(slug, { authorSub: authorSub, title: title, markSeen: markSeen, src: src, notFound: 'That note isn\u2019t available anymore', failMsg: 'Couldn\u2019t open that note' });
 }
 async function nbGoToNoteLink() {
   const input = document.getElementById('feed-search-input');
@@ -44792,7 +45188,8 @@ const NB_NUDGE_SETTINGS = [
   { k: 'maskEmail', need: function () { return nbIsSignedIn(); }, bad: function (v) { return v === true; }, title: 'Your email is hidden', body: 'Your email address is masked everywhere in the app.', label: 'Show email', fix: false, done: 'Email address is showing' },
   { k: 'images', bad: function (v) { return v === false; }, title: 'Image previews are off', body: 'Note cards show no photos. Turn previews back on if images look missing.', label: 'Turn on', fix: true, done: 'Image previews are on', after: function () { nbRenderNotesScreen(); } },
   { k: 'stories', bad: function (v) { return v === false; }, title: 'Stories strip is off', body: 'Stories no longer show above your notes in All.', label: 'Turn on', fix: true, done: 'Stories strip is on', after: function () { _nbSyncStoriesStripVisibility(); } },
-  { k: 'mediaSwipe', bad: function (v) { return v === false; }, title: 'Media swipe is off', body: 'Swiping in from the left edge no longer opens Media.', label: 'Turn on', fix: true, done: 'Media swipe is on' }
+  { k: 'mediaSwipe', bad: function (v) { return v === false; }, title: 'Media swipe is off', body: 'Swiping in from the left edge no longer opens Media.', label: 'Turn on', fix: true, done: 'Media swipe is on' },
+  { k: 'storySwipe', bad: function (v) { return v === false; }, title: 'Note swipe is off', body: 'Swiping left or right in the viewer no longer moves to the next or previous note.', label: 'Turn on', fix: true, done: 'Note swipe is on' } // [2026-11-25 22:20 | swipe-setting]
 ];
 function _nbNudgeLoad() {
   try { const o = JSON.parse(localStorage.getItem(NB_NUDGE_KEY) || '{}'); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; }
@@ -45079,6 +45476,15 @@ function _nbNudgeList(st, notes, now) {
   if (live.length && nbIsSignedIn() && !live.some(function (n) { return n.showInStories; })) {
     L.push({ id: 'story', title: 'Add a page to your story', body: 'None of your pages are in your story yet. Add one so people can find it.',
       label: 'Add to story', go: function () { nbOpenPublishSheet(live[0].id); } });
+  }
+  // [2026-11-25 22:20 | swipe-setting] Feature tips for the story swipe and Autoplay first media. Both need stories on screen to make sense. The swipe tip stops once the person has swiped (_nbNudgeSeen in _nbSwGo); the autoplay tip stops once the setting is on, however it was turned on.
+  if (window._nbSt('storySwipe') && !(st.seen && st.seen.storySwipe) && _nbStoriesCache.length > 1) {
+    L.push({ id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.',
+      label: 'Try it', go: function () { const f = _nbStoriesCache[0]; if (f) nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); } });
+  }
+  if (!window._nbSt('autoplayEmbed') && !(st.seen && st.seen.autoplay) && _nbStoriesCache.length > 0) {
+    L.push({ id: 'autoplay', title: 'Autoplay media on pages', body: 'Start the first video or audio on a page as soon as it opens in the viewer.',
+      label: 'Turn on', go: function () { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} _nbNudgeSeen('autoplay'); showToast('Autoplay is on'); nbNudgeRender(); } });
   }
   if (!(st.seen && st.seen.media) && _nbNudgeHasMedia(notes)) {
     L.push({ id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.',
@@ -49441,11 +49847,14 @@ window.addEventListener('message', function (e) {
   }
   // [2026-11-02 23:15 | page-nav] from the page's footer row: ready (answer with which chevrons exist), a chevron tap, a tick tap
   if (e.data.type === 'nb-foot-ready') { _nbStoryNavSend(e.source); return; }
+  if (e.data.type === 'nb-autoplay') { _nbAutoPlayMsg(e.source); return; } // [2026-11-25 22:12 | embed-autoplay]
+  if (e.data.type === 'nb-sw') { _nbSwMsg(e.source, e.data); return; } // [2026-11-25 21:55 | story-swipe]
   if (e.data.type === 'nb-nav-go') { _nbStoryNavGo(e.source, e.data.dir); return; }
   if (e.data.type === 'nb-nav-list') { if (_nbStoryNavFrameOk(e.source)) nbAuthorPagesOpen(); return; } // [2026-11-03 04:24 | page-list]
   if (e.data.type === 'nb-nav-dup') { _nbStoryNavDup(e.source); return; } // [2026-11-25 | page-duplicate]
   if (e.data.type === 'nb-verified-tap') { const sf2 = document.getElementById('story-viewer-frame'); if (e.source && sf2 && e.source === sf2.contentWindow) nbVerifiedInfo(); return; }
   if (e.data.type === 'nb-page-ready') { // a page that reports its own layout as settled
+    _nbSwPageReady(e.source); // [2026-11-25 22:02 | story-swipe] a hidden neighbour frame
     const sf = document.getElementById('story-viewer-frame');
     if (e.source && sf && e.source === sf.contentWindow) _nbStoryRevealFrame();
   }
