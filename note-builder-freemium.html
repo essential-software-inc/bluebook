@@ -7718,6 +7718,7 @@ body.nb-reduce-motion #einfo-dialog {animation:none}
   <div id="sv-poster" aria-hidden="true"><div class="sv-poster-spin"></div></div>
   <iframe id="sv-spare-1" class="sv-spare" tabindex="-1" aria-hidden="true" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
   <iframe id="sv-spare-2" class="sv-spare" tabindex="-1" aria-hidden="true" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+  <iframe id="sv-spare-3" class="sv-spare" tabindex="-1" aria-hidden="true" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
   <button id="story-ad-fab" type="button" onclick="nbStoryAdSkip()" aria-label="Skip ad" disabled>
     <svg class="ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-bg" cx="22" cy="22" r="19" fill="none" stroke-width="3"/><circle class="ring-fg" id="story-ad-ring" cx="22" cy="22" r="19" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="0"/></svg>
     <span id="story-ad-num"></span>
@@ -19301,6 +19302,9 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      TOPICS
         swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay first media (this app)
         embed-autoplay    Settings > Autoplay first media: the viewer starts the first video or audio on a page (this app and the Worker)
+        keep-fresh        kept and preloaded pages follow changes to the note in the background (this app and the Worker /meta)
+        swipe-keep        a swipe to a page that was not preloaded still keeps the page it left, so swiping back is instant (app only)
+        back-keep         Back from a note link or the page list returns to the kept page with no reload or spinner (app only)
         swipe-hold        a swipe held part way no longer shakes; a page swiped away stops its media (this app and the Worker)
         story-swipe       swiping sideways between stories in the viewer (strip, Subscribed, Liked, Published), next set loads past the strip's end (this app and the Worker)
         online-check      the Back online toast waits until our service answers; if it can't connect it says so, keeps trying, and ends with Back online or a final notice (this app)
@@ -19368,6 +19372,68 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-26 01:14 | topics: keep-fresh | AI: Claude (app) | Kept and preloaded pages update when the note changes
+       Start state
+         A neighbour preloaded for a swipe, and a page kept for Back, stayed as they were loaded. If the author changed the note meanwhile, the old copy was shown (and the page cache can keep a copy for 5 minutes).
+       Work done
+         Worker: /meta also returns updatedAt. App: every kept or preloaded frame has a ver (updatedAt when it loaded; _nbVer is the one in the viewer frame, and versions move with the pages in _nbSwRotate, _nbParkSave and _nbParkRestore). _nbKeptPoll runs every 15 s while the viewer is open (and when the app returns to the front) and asks /meta for each ready neighbour and the kept page. A changed note reloads that hidden frame with r=<updatedAt> added to its address (cache not reused) and it is not ready until it has settled again; a swipe in that moment shows the spinner panel, Back opens normally. A note that is gone, locked or hidden is dropped from the frame. Preloads now use the same r= address. When a page that came from a kept or preloaded frame is found older than /meta says right after it opens, it is reloaded once behind the spinner (_nbVerSeen, _nbStoryRefreshMain), but not while the comments sheet is open or a swipe is in progress. The page on screen is never replaced while it is being read.
+         Also: one load listener (_nbSwWireLoad) is now on every frame that can hold a neighbour or the kept page (before, only the two original spare frames had it, so a frame that had been the viewer frame never marked itself ready by load), and a blank frame can no longer be marked ready: clearing a slot loads about:blank, and if the next /meta was slow that load could mark the empty frame ready.
+       Improvements
+         The load-listener and blank-frame fixes above.
+       Fixed
+         Stale neighbours and stale kept pages.
+       Found
+         Likes and comments counts are not part of updatedAt, so a page that is only liked or commented on does not trigger a refresh. A normal open can still show a copy the page cache holds for up to 5 minutes (Cache-Control public, max-age 300 in the Worker); only refreshes and preloads bypass it.
+       Important details
+         3 small /meta calls at most every 15 s while the viewer is open and the screen is on; none when nothing is kept.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone or Cloudflare. Syntax checked only. Try with two pages: open one, let the next preload, edit and publish the next one from another device, wait 15 s, swipe (new content, no spinner); same for Back after a note link; unpublish the next one and check the swipe shows the end or the spinner path, not old content.
+       Depends on
+         Deploy the Worker (/meta updatedAt) first. With the old Worker the app does nothing new here.
+
+     SESSION 2026-11-26 01:05 | topics: swipe-keep | AI: Claude (app) | First swipe back showed the spinner
+       Start state
+         With two pages, the first swipe back showed the spinner panel, later swipes were instant.
+       Work done
+         When the swipe forward found the next page not loaded yet (swiped soon after opening, before the 0.5 s preload plus load and settle time), the commit branch cleared both slots and reloaded the one viewer frame with the new story, so the page being left was gone and the way back loaded it again. That branch now does the same swap as a normal swipe (_nbSwRotate): the page being left goes into the slot behind it, ready, and a blank frame loads the new story behind the spinner panel (not adopted, so it holds and reveals as a normal open). The unfinished preload of that story is dropped first.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The spinner on the first swipe back after a swipe forward that had no preload.
+       Found
+         If the swipe forward was already instant and the first swipe back still shows the spinner, this was not the cause: say so and the slot state needs logging.
+       Important details
+         Going to a page that was not preloaded still shows the spinner once; it cannot be avoided. Going two or more pages back still depends on the preload.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try with two pages: open one, swipe at once (spinner expected), swipe back (instant), forward (instant). Then the same after waiting a few seconds.
+       Depends on
+         Nothing new in the Worker.
+
+     SESSION 2026-11-26 01:01 | topics: back-keep | AI: Claude (app) | Back to a page already loaded shows no spinner
+       Start state
+         Back from a note opened by a link or the page list reloaded the page behind the spinner, because the one viewer frame had been given to the new note.
+       Work done
+         The page being left is kept loaded in a third hidden frame (#sv-spare-3, _nbPark). nbOpenStory parks it just before the new note opens (_nbParkSave: the same id swap as _nbSwRotate, a blank frame becomes the viewer frame), only for the open a note link or the page list asked for (_nbParkNext holds the slug). nbStoryBack swaps it in (_nbParkRestore) and opens it as an adopted page, so nothing reloads; it answers the page's ready, nav and autoplay messages like a swiped-in page. The page left behind is told to stop its media. The kept page and the Back entry share a token, so a stale entry just reloads.
+         Only the most recent page is kept. Going back two steps reloads the older one. A kept page is dropped when a different link opens from the new note, when the viewer closes, and when a version view opens.
+       Improvements
+         Nothing beyond the task.
+       Fixed
+         The spinner on Back.
+       Found
+         The chevrons inside the viewer have no Back entry (they replace the page rather than stack on it), so they are unchanged.
+       Important details
+         The kept page is not refreshed: it comes back as it was, scroll included, and does not pick up new likes or comments until it is reopened. A note that opens an ad first is not kept.
+       Removed
+         Nothing.
+       Untested
+         Not run on a phone. Syntax checked only. Try: open a note, tap a link to another note, Back (instant, same scroll); the same via the page list; link, link, Back, Back (second one reloads); close the viewer then open another (no leftover page, no sound); a video playing in the note you leave stops.
+       Depends on
+         Nothing new in the Worker.
 
      SESSION 2026-11-25 23:36 | topics: swipe-hold | AI: Claude (app) | Swipe held part way shakes; autoplay keeps playing after a swipe away
        Start state
@@ -32456,9 +32522,10 @@ function _nbTryOpenNoteLink(url) {
   const ov = document.getElementById('story-viewer-overlay');
   const prev = (ov && ov.classList.contains('open') && !_nbStoryAd && _nbCurrentStorySlug && _nbCurrentStorySlug !== slug)
     ? { slug: _nbCurrentStorySlug, authorSub: _nbCurrentStoryAuthorSub || '', title: '', ctx: _nbSwCtx } : null;
+  if (prev) _nbParkNext = slug; // [2026-11-26 01:01 | back-keep] the page being left is kept for Back
   _nbOpenStoryBySlug(slug, { src: 'nav' }).then(ok => {
-    if (ok && prev) _nbStoryBackStack.push(prev);
-  }).catch(e => _nbLog('note link history', e));
+    if (ok && prev) { if (_nbPark.slug === prev.slug && _nbPark.tok) prev.park = _nbPark.tok; _nbStoryBackStack.push(prev); }
+  }).catch(e => _nbLog('note link history', e)).finally(() => { if (_nbParkNext === slug) _nbParkNext = null; });
   return true;
 }
 function _nbOpenExternalLink(url) {
@@ -37290,7 +37357,7 @@ function _nbOpenVersionView(v, html, pageBlob) {
   const ov = document.getElementById('story-viewer-overlay'), fr = document.getElementById('story-viewer-frame'), hdr = document.getElementById('story-viewer-header');
   const titleEl = document.getElementById('story-viewer-title'), inner = document.getElementById('story-viewer-title-text');
   _nbStoryAdReset(); _nbStoryRetryStop();
-  _nbStoryCommentsOpen = false; _nbStoryBackStack = []; _nbSwCtx = null; _nbCurrentStorySlug = null; _nbCurrentStoryAuthorSub = null; // no slug: the comments / like / follow hooks all stay idle
+  _nbStoryCommentsOpen = false; _nbStoryBackStack = []; _nbParkClear(); _nbSwCtx = null; _nbCurrentStorySlug = null; _nbCurrentStoryAuthorSub = null; // no slug: the comments / like / follow hooks all stay idle
   _pubTeamsPrevV = v;
   inner.textContent = _pubTeamsVerWhen(v); nbUpdateTitleMarquee(titleEl, inner, true);
   hdr.classList.remove('has-actions', 'like-only', 'has-tick');
@@ -38690,6 +38757,43 @@ function _nbAutoPlayMsg(src) {
 }
 // [2026-11-25 23:36 | swipe-hold] A page that is swiped away is told to go quiet (nb-autoplay-cfg on:false: its videos and audio pause, an embed that was autoplayed is put back without autoplay), because the frame stays loaded behind the viewer as a neighbour. Sent whatever the Autoplay setting says, so a video started by hand stops too.
 function _nbAutoPlayStop(fr) { try { if (fr && fr.contentWindow) fr.contentWindow.postMessage({ type: 'nb-autoplay-cfg', on: false }, '*'); } catch (e) {} }
+// [2026-11-26 01:01 | back-keep] Back from a note opened by a link (or from the page list) returns to the page as it was, with no reload and no spinner. When a note link or the page list opens another note, the page being left is kept loaded in a third hidden frame (#sv-spare-3, _nbPark) and a blank frame becomes the viewer frame for the new note (the same id swap as _nbSwRotate). Back swaps it in again. Only the most recent page is kept: going further back reloads, as before. _nbParkNext holds the slug about to open so only that open parks.
+const _nbPark = { fr: null, slug: null, tok: 0, seq: 0, ready: false, t: 0, ver: null };
+let _nbParkNext = null;
+function _nbParkClear() {
+  const P = _nbPark; P.slug = null; P.tok = 0; P.ready = false; P.ver = null; clearTimeout(P.t);
+  if (!P.fr) P.fr = document.getElementById('sv-spare-3');
+  const a = P.fr && P.fr.getAttribute('src');
+  if (a && a !== 'about:blank') P.fr.src = 'about:blank';
+}
+function _nbParkSave() { // the open page goes into the park frame; a blank frame becomes the viewer frame
+  const P = _nbPark, main = document.getElementById('story-viewer-frame');
+  if (!P.fr) P.fr = document.getElementById('sv-spare-3');
+  if (!P.fr || !main || !_nbCurrentStorySlug) return;
+  const blank = P.fr, slug = _nbCurrentStorySlug; // a page kept earlier is dropped: its frame is the blank one
+  const a = blank.getAttribute('src'); if (a && a !== 'about:blank') blank.src = 'about:blank';
+  _nbAutoPlayStop(main);
+  main.id = ''; main.classList.add('sv-spare'); main.classList.remove('sv-loading');
+  blank.classList.remove('sv-spare', 'sv-loading'); blank.id = 'story-viewer-frame';
+  [main, blank].forEach(f => { f.style.transition = 'none'; f.style.transform = ''; f.style.visibility = ''; });
+  clearTimeout(P.t); _nbSwWireLoad(main); _nbSwWireLoad(blank); main._svSlot = P; blank._svSlot = null;
+  P.fr = main; P.slug = slug; P.tok = ++P.seq; P.ready = true; P.ver = _nbVer.slug === slug ? _nbVer.v : null; // [2026-11-26 01:14 | keep-fresh]
+}
+function _nbParkRestore(prev) { // true when prev's page was kept and is the viewer frame again
+  const P = _nbPark, main = document.getElementById('story-viewer-frame');
+  if (!prev || !prev.park || P.tok !== prev.park || P.slug !== prev.slug || !P.fr || !main || _nbStoryAd) return false;
+  if (!P.ready) { _nbParkClear(); return false; } // [2026-11-26 01:14 | keep-fresh] it is being refreshed right now: open it normally instead
+  const kept = P.fr, keptVer = P.ver;
+  _nbAutoPlayStop(main); // the note being left stops playing
+  main.id = ''; main.classList.add('sv-spare'); main.classList.remove('sv-loading');
+  kept.classList.remove('sv-spare', 'sv-loading'); kept.id = 'story-viewer-frame';
+  [main, kept].forEach(f => { f.style.transition = 'none'; f.style.transform = ''; f.style.visibility = ''; });
+  const a = main.getAttribute('src'); if (a && a !== 'about:blank') main.src = 'about:blank';
+  clearTimeout(P.t); kept._svSlot = null; main._svSlot = P; _nbSwWireLoad(kept); _nbSwWireLoad(main);
+  P.fr = main; P.slug = null; P.tok = 0; P.ready = false; P.ver = null;
+  _nbVer = { slug: prev.slug, v: keptVer };
+  return true;
+}
 let _nbSwCtx = null; // { kind: 'strip', items, pos, more, batch, batchRaw, fetching } | { kind: 'feed', tab }
 const _nbSwG = { on: false, dir: 0, item: null, w: 0, busy: false, tok: 0, toasted: false };
 function _nbSwItem(s) { return { slug: s.slug, authorSub: s.authorSub || '', title: s.title || '' }; }
@@ -38771,29 +38875,37 @@ function _nbSwGo(dir, item, adopted) {
 // nothing flashes after it. A neighbour is only loaded when /meta says the page is live and not switched off in Teams (those fall back to the spinner
 // panel). On a committed swipe the hidden frame becomes the viewer's frame (they swap ids) and the old one becomes the neighbour behind it; the frame on
 // the far side is reused for the next preload. If the neighbour was not ready, the panel slides in and the page loads after, as before.
-const _nbSwSlots = { n: { fr: null, slug: null, ready: false, t: 0 }, p: { fr: null, slug: null, ready: false, t: 0 } };
+const _nbSwSlots = { n: { fr: null, slug: null, ready: false, t: 0, ver: null }, p: { fr: null, slug: null, ready: false, t: 0, ver: null } };
+// [2026-11-26 01:14 | keep-fresh] _nbVer: the version (the note's updatedAt from /meta) of the page now in the viewer frame, when it came from a kept or preloaded frame or was just opened. Slots and the kept page carry their own ver. An old Worker sends no updatedAt: ver stays null and nothing below runs.
+let _nbVer = { slug: null, v: null };
 let _nbSwAdopt = false, _nbSwPreTimer = 0;
 function _nbSwSlotInit() {
   const S = _nbSwSlots;
   if (!S.n.fr) {
     S.n.fr = document.getElementById('sv-spare-1'); S.p.fr = document.getElementById('sv-spare-2');
     S.n.fr._svSlot = S.n; S.p.fr._svSlot = S.p;
-    [S.n.fr, S.p.fr].forEach(fr => fr.addEventListener('load', () => {
-      const sl = fr._svSlot; if (!sl || !sl.slug) return;
-      clearTimeout(sl.t); const sg = sl.slug;
-      sl.t = setTimeout(() => { if (sl.slug === sg) sl.ready = true; }, 1200); // or earlier, when the page says its layout settled (nb-page-ready)
-    }));
+    [S.n.fr, S.p.fr].forEach(_nbSwWireLoad);
   }
   return S;
 }
+// [2026-11-26 01:14 | keep-fresh] One load listener for any frame that may hold a neighbour or the kept page (frames change roles, so every one gets it). A blank frame never counts as loaded: clearing a slot loads about:blank, and that load used to be able to mark an empty frame ready.
+function _nbSwWireLoad(fr) {
+  if (!fr || fr._svLoadWired) return; fr._svLoadWired = true;
+  fr.addEventListener('load', () => {
+    const sl = fr._svSlot; if (!sl || !sl.slug) return;
+    const a = fr.getAttribute('src'); if (!a || a === 'about:blank') return;
+    clearTimeout(sl.t); const sg = sl.slug;
+    sl.t = setTimeout(() => { if (sl.slug === sg) sl.ready = true; }, 1200); // or earlier, when the page says its layout settled (nb-page-ready)
+  });
+}
 function _nbSwSlotClear(sl) {
   if (!sl) return;
-  clearTimeout(sl.t); sl.slug = null; sl.ready = false;
+  clearTimeout(sl.t); sl.slug = null; sl.ready = false; sl.ver = null;
   const a = sl.fr && sl.fr.getAttribute('src');
   if (a && a !== 'about:blank') sl.fr.src = 'about:blank';
 }
 function _nbSwSlotsClear() { if (_nbSwSlots.n.fr) { _nbSwSlotClear(_nbSwSlots.n); _nbSwSlotClear(_nbSwSlots.p); } }
-function _nbSwPageReady(src) { const S = _nbSwSlots; [S.n, S.p].forEach(sl => { if (sl.fr && sl.slug && sl.fr.contentWindow === src) sl.ready = true; }); }
+function _nbSwPageReady(src) { const S = _nbSwSlots; [S.n, S.p, _nbPark].forEach(sl => { if (sl.fr && sl.slug && sl.fr.contentWindow === src) sl.ready = true; }); }
 function _nbSwPreloadSoon() { clearTimeout(_nbSwPreTimer); _nbSwPreTimer = setTimeout(_nbSwPreload, 500); }
 async function _nbSwPreload() {
   const c = _nbSwCtx, ov = document.getElementById('story-viewer-overlay'), main = document.getElementById('story-viewer-frame');
@@ -38812,19 +38924,62 @@ async function _nbSwPreload() {
       const d = res.ok ? await res.json() : null;
       if (_nbSwCtx !== c || sl.slug !== slug) continue;
       if (!d || !d.found || d.hidden) { sl.slug = null; continue; } // not live, or only for the team: no preload, the panel is used
-      sl.fr.src = _nbViewerUrl(slug);
+      sl.ver = d.updatedAt || null; // [2026-11-26 01:14 | keep-fresh]
+      sl.fr.src = sl.ver ? _nbSwFreshUrl(slug, sl.ver) : _nbViewerUrl(slug);
     } catch (e) { if (sl.slug === slug) sl.slug = null; }
   }
 }
+// [2026-11-26 01:14 | keep-fresh] Pages kept loaded (the two neighbours and the page kept for Back) are checked against /meta every 15 s while the viewer is open, and when the app comes back to the front. A page whose note was changed is reloaded in its hidden frame with a changed address (r=<updatedAt>, so a cached copy is never reused) and is not used for a swipe or Back until it has settled; until then a swipe falls back to the spinner panel and Back to a normal open. A note that is gone, locked or switched off in Teams is dropped. The page on screen is never replaced while it is being read. When a page that came from a kept or preloaded frame turns out older than /meta says (_nbVerSeen), it is reloaded behind the spinner once.
+function _nbSwFreshUrl(slug, v) { const u = _nbViewerUrl(slug); return u + (u.indexOf('?') < 0 ? '?' : '&') + 'r=' + encodeURIComponent(v); }
+function _nbKeptRefresh(h, slug, v) { clearTimeout(h.t); h.ready = false; h.ver = v; h.fr.src = _nbSwFreshUrl(slug, v); }
+function _nbVerSeen(slug, v) { // /meta's updatedAt for the page that is open now
+  if (!v || _nbCurrentStorySlug !== slug) return;
+  if (_nbVer.slug !== slug) { _nbVer = { slug: slug, v: v }; return; } // opened normally: this is the version it loaded
+  if (!_nbVer.v) { _nbVer.v = v; return; }
+  if (_nbVer.v !== v) _nbStoryRefreshMain(slug, v); // came from a kept or preloaded frame and the note changed since
+}
+function _nbStoryRefreshMain(slug, v) {
+  const fr = document.getElementById('story-viewer-frame');
+  if (!fr || _nbCurrentStorySlug !== slug || _nbStoryAd || _nbStoryCommentsOpen || _nbSwG.on || _nbSwG.busy) return;
+  _nbVer = { slug: slug, v: v }; _nbStoryMetaGate = null;
+  _nbStoryHoldFrame(); fr.src = _nbSwFreshUrl(slug, v);
+}
+let _nbKeptPolling = false;
+async function _nbKeptPoll() {
+  const ov = document.getElementById('story-viewer-overlay');
+  if (_nbKeptPolling || !ov || !ov.classList.contains('open') || document.hidden || _nbStoryAd || _nbSwG.on || _nbSwG.busy || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+  const S = _nbSwSlots, hs = [S.n, S.p, _nbPark].filter(h => h.fr && h.slug && h.ready && h.ver);
+  if (!hs.length) return;
+  _nbKeptPolling = true;
+  try {
+    for (const h of hs) {
+      const slug = h.slug, fr = h.fr, ver = h.ver;
+      let d = null, gone = false;
+      try {
+        const res = await fetch(NB_PUBLISH_API.replace(/\/$/, '') + '/meta/' + encodeURIComponent(slug), { cache: 'no-store' });
+        if (res.status === 404) gone = true; else if (res.ok) d = await res.json();
+      } catch (e) { continue; }
+      if (h.slug !== slug || h.fr !== fr || !h.ready || _nbSwG.on || _nbSwG.busy) continue; // moved on while asking
+      if (gone || (d && (!d.found || d.hidden))) { if (h === _nbPark) _nbParkClear(); else _nbSwSlotClear(h); continue; }
+      if (d && d.updatedAt && d.updatedAt !== ver) _nbKeptRefresh(h, slug, d.updatedAt);
+    }
+  } catch (e) { _nbLog('kept pages check', e); }
+  finally { _nbKeptPolling = false; }
+}
+setInterval(_nbKeptPoll, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) _nbKeptPoll(); });
 function _nbSwRotate(dir, slIn) { // the ready frame of slot slIn becomes the viewer frame; the old one goes behind it
   const S = _nbSwSlots, slFar = slIn === S.n ? S.p : S.n, main = document.getElementById('story-viewer-frame'), inc = slIn.fr, oldSlug = _nbCurrentStorySlug;
-  _nbAutoPlayStop(main); // [2026-11-25 23:36 | swipe-hold] the page swiped away stops playing
+  const inSlug = slIn.slug, inVer = slIn.ver, oldVer = _nbVer.slug === oldSlug ? _nbVer.v : null; // [2026-11-26 01:14 | keep-fresh] versions travel with their pages
+  _nbAutoPlayStop(main); // [2026-11-26 01:14 | swipe-hold] the page swiped away stops playing
   main.id = ''; main.classList.add('sv-spare');
   inc.classList.remove('sv-spare'); inc.id = 'story-viewer-frame'; inc._svSlot = null;
   const farFr = slFar.fr;
-  slIn.fr = farFr; farFr._svSlot = slIn; slIn.slug = null; slIn.ready = false; clearTimeout(slIn.t);
+  slIn.fr = farFr; farFr._svSlot = slIn; slIn.slug = null; slIn.ready = false; slIn.ver = null; clearTimeout(slIn.t);
   if (farFr.getAttribute('src') && farFr.getAttribute('src') !== 'about:blank') farFr.src = 'about:blank';
-  slFar.fr = main; main._svSlot = slFar; slFar.slug = oldSlug; slFar.ready = true; clearTimeout(slFar.t);
+  slFar.fr = main; main._svSlot = slFar; slFar.slug = oldSlug; slFar.ready = true; slFar.ver = oldVer; clearTimeout(slFar.t);
+  _nbSwWireLoad(main); _nbSwWireLoad(inc);
+  _nbVer = { slug: inSlug, v: inVer };
   [main, inc].forEach(f => { f.style.transition = 'none'; f.style.transform = ''; f.style.visibility = ''; });
 }
 function _nbSwEls() { return { ov: document.getElementById('story-viewer-overlay'), fr: document.getElementById('story-viewer-frame'), po: document.getElementById('sv-poster') }; }
@@ -38882,10 +39037,11 @@ function _nbSwMsg(src, m) {
         if (tok !== g.tok || c !== _nbSwCtx || !e.ov.classList.contains('open')) return; // closed or moved on meanwhile (_nbSwReset already cleaned up)
         if (pre && pre.ready && pre.slug === item.slug) { _nbSwRotate(dir, pre); _nbSwAdopt = true; _nbSwGo(dir, item, true); }
         else {
-          _nbSwSlotsClear(); // what was loaded no longer sits next to the story that opens
-          _nbSwGo(dir, item); // opens the story first (that hides the old page), then the panels are put back
-          e.fr.style.transition = 'none'; e.fr.style.transform = '';
-          if (pre) { pre.fr.style.transition = 'none'; pre.fr.style.transform = ''; pre.fr.style.visibility = ''; }
+          // [2026-11-26 01:05 | swipe-keep] The next page was not loaded yet. The page being left is still kept (it goes into the slot behind, ready) and a blank frame loads the new story behind the spinner panel, so swiping back finds it at once. Before this the old page was dropped and the way back had to load it again.
+          const slIn = dir > 0 ? S.n : S.p;
+          _nbSwSlotInit(); _nbSwSlotClear(slIn); // the blank frame that will load the new story (an unfinished preload of it is dropped)
+          _nbSwRotate(dir, slIn);
+          _nbSwGo(dir, item);
         }
         e.po.style.transition = 'none'; e.po.style.transform = ''; e.po.style.display = 'none';
         g.busy = false;
@@ -38913,6 +39069,7 @@ function _nbSwMsg(src, m) {
 function nbOpenStory(slug, authorSub, title, markSeen, src) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
   _nbSwSetCtx(slug, markSeen, src);
   const ad = _nbStoryAdForOpen(slug, authorSub);
+  if (_nbParkNext && src === 'nav' && _nbParkNext === slug) { _nbParkNext = null; if (!ad) _nbParkSave(); } // [2026-11-26 01:01 | back-keep]
   if (ad) { _nbSwAdopt = false; _nbStoryAdOpen(ad, { slug, authorSub, title, markSeen }); }
   else _nbOpenStoryNow(slug, authorSub, title, markSeen);
   _nbSwAfterOpen();
@@ -39007,6 +39164,7 @@ function _nbStoryAdReset() {
 }
 function _nbOpenStoryNow(slug, authorSub, title, markSeen) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
   const _adopt = _nbSwAdopt; _nbSwAdopt = false; // [2026-11-25 22:02 | story-swipe] a swipe whose page is already loaded in the frame: no reload, no spinner
+  if (!_adopt) _nbVer = { slug: null, v: null }; // [2026-11-26 01:14 | keep-fresh] a normal open: its version is taken from /meta (_nbVerSeen)
   _nbStoryAdReset();
   _nbStoryRetryStop();
   _nbStoryCommentsOpen = false;
@@ -39480,8 +39638,14 @@ function nbAuthorPagesPick(slug, authorSub, title) {
   if (!slug || slug === cur) return;
   const ov = document.getElementById('story-viewer-overlay');
   if (ov && ov.classList.contains('open') && !_nbStoryAd && cur) {
-    _nbStoryBackStack.push({ slug: cur, authorSub: _nbCurrentStoryAuthorSub || '', title: '', ctx: _nbSwCtx });
+    const ent = { slug: cur, authorSub: _nbCurrentStoryAuthorSub || '', title: '', ctx: _nbSwCtx };
+    _nbStoryBackStack.push(ent);
     if (_nbStoryBackStack.length > 30) _nbStoryBackStack.shift();
+    _nbParkNext = slug; // [2026-11-26 01:01 | back-keep]
+    nbOpenStory(slug, authorSub, title || '', false, 'nav');
+    _nbParkNext = null;
+    if (_nbPark.slug === ent.slug && _nbPark.tok) ent.park = _nbPark.tok;
+    return;
   }
   nbOpenStory(slug, authorSub, title || '', false, 'nav');
 }
@@ -39503,7 +39667,7 @@ function _nbCheckStoryReachable(slug) {
         if (_nbCurrentStorySlug !== slug) return;
         if (!data || !data.found) { _nbStoryGateOpen(slug); showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); }
         else if (data.hidden) _nbStoryTryAccess(slug); // [2026-11-02 23:20 | discoverable-setting] switched off in Teams: only the team gets in
-        else { _nbStoryGateOpen(slug); _nbApplyStoryMeta(slug, data); }
+        else { _nbStoryGateOpen(slug); _nbApplyStoryMeta(slug, data); _nbVerSeen(slug, data.updatedAt); } // [2026-11-26 01:14 | keep-fresh]
       });
     })
     .catch(e => {
@@ -39526,7 +39690,10 @@ function nbStoryBack() {
   if (_nbStoryBackStack.length) { // opened from a link in another note: go back to that note first
     const prev = _nbStoryBackStack.pop();
     _nbSwCtx = prev.ctx || null; // the list it came from swipes again
+    const kept = _nbParkRestore(prev); // [2026-11-26 01:01 | back-keep] the page was kept loaded: no reload, no spinner
+    if (kept) _nbSwAdopt = true;
     _nbOpenStoryNow(prev.slug, prev.authorSub, prev.title);
+    if (kept) { const w = document.getElementById('story-viewer-frame').contentWindow; if (w) { _nbSwMsg(w, { p: 'r' }); _nbStoryNavSend(w); _nbAutoPlayMsg(w); } }
     return;
   }
   nbCloseStory();
@@ -39534,7 +39701,7 @@ function nbStoryBack() {
 function nbCloseStory() {
   nbAuthorPagesClose(); // [2026-11-03 04:24 | page-list]
   _nbVersionViewEnd();
-  _nbStoryBackStack = [];
+  _nbStoryBackStack = []; _nbParkClear(); // [2026-11-26 01:01 | back-keep]
   _nbSwCtx = null; _nbSwReset(); // [2026-11-25 21:55 | story-swipe]
   _nbStoryAdReset();
   const _ov = document.getElementById('story-viewer-overlay');
