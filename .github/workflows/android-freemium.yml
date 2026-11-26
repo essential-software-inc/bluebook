@@ -1,0 +1,476 @@
+name: Android build (freemium)
+
+# Manual trigger only. Builds note-builder-freemium.html (repo root) with the
+# notebuilderpro identity, same steps as Codemagic's android-pro-freemium workflows.
+# Needs repo secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+# and repo variable: VERSION_CODE_OFFSET.
+
+on:
+  workflow_dispatch:
+    inputs:
+      format:
+        description: Build format
+        type: choice
+        options: [aab, apk, both]
+        default: aab
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.format == 'both' && '["aab","apk"]' || format('["{0}"]', inputs.format)) }}
+    env:
+        PACKAGE_NAME: "com.essentialsoftware.notebuilderpro"
+        APP_VERSION: "3.2.9"
+        PROJECT_BUILD_NUMBER: ${{ github.run_number }}
+        VERSION_CODE_OFFSET: ${{ vars.VERSION_CODE_OFFSET }}
+        CM_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        CM_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        CM_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Check version code offset
+        shell: bash
+        run: |
+          if [ -z "$VERSION_CODE_OFFSET" ]; then
+            echo "ERROR: repo variable VERSION_CODE_OFFSET is not set."
+            echo "versionCode = run number + offset. Set offset = (last Play versionCode) - (this run number) + 1 or higher."
+            exit 1
+          fi
+      - name: Prepare signing keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "CM_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: "Select Pro (freemium) app source files"
+        shell: bash
+        run: |
+          # Same app identity as android-pro-workflow (same appId, same
+          # keystore) — the only difference is which HTML ships: this one
+          # builds note-builder-freemium.html (note-cap + RevenueCat
+          # paywall) instead of the ungated note-builder-pro.html, so you
+          # can test either variant without maintaining two app listings.
+          cp capacitor.config.pro.ts capacitor.config.ts
+          mkdir -p www
+          cp note-builder-freemium.html www/index.html
+      - name: "Install npm dependencies"
+        shell: bash
+        run: |
+          npm install
+      - name: "Verify appId matches PACKAGE_NAME"
+        shell: bash
+        run: |
+          CONFIG_APP_ID=$(grep -oE "appId:[[:space:]]*'[^']+'" capacitor.config.ts | sed -E "s/appId:[[:space:]]*'([^']+)'/\1/")
+          if [ "$CONFIG_APP_ID" != "$PACKAGE_NAME" ]; then
+            echo "ERROR: capacitor.config.ts appId ('$CONFIG_APP_ID') does not match PACKAGE_NAME ('$PACKAGE_NAME')."
+            echo "Fix capacitor.config.pro.ts or the PACKAGE_NAME var above before building."
+            exit 1
+          fi
+          echo "appId matches PACKAGE_NAME: $CONFIG_APP_ID"
+      - name: "Add Android platform (skips if android/ is already committed)"
+        shell: bash
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+      - name: "Disable native WebView scrollbar"
+        shell: bash
+        run: |
+          # See android-pro-workflow's identical step for the full
+          # explanation — this patches CapacitorWebView.java's constructor
+          # in node_modules (not MainActivity.java) since that's the class
+          # Capacitor's WebView actually is.
+          WEBVIEW_SRC="node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/CapacitorWebView.java"
+          python3 - "$WEBVIEW_SRC" <<'PY'
+          import sys
+          path = sys.argv[1]
+          with open(path) as f:
+              content = f.read()
+          old = "    public CapacitorWebView(Context context, AttributeSet attrs) {\n        super(context, attrs);\n    }"
+          new = "    public CapacitorWebView(Context context, AttributeSet attrs) {\n        super(context, attrs);\n        setVerticalScrollBarEnabled(false);\n        setHorizontalScrollBarEnabled(false);\n    }"
+          if "setVerticalScrollBarEnabled(false)" in content:
+              print("Native scrollbar already disabled in", path)
+              raise SystemExit(0)
+          if old not in content:
+              raise SystemExit(
+                  "ERROR: CapacitorWebView.java didn't match the expected "
+                  "constructor shape - the installed @capacitor/android "
+                  "version may have changed it. Update this patch step to match."
+              )
+          content = content.replace(old, new, 1)
+          with open(path, "w") as f:
+              f.write(content)
+          print("Disabled native WebView scrollbar in", path)
+          PY
+      - name: "Disable pinch-zoom (Android)"
+        shell: bash
+        run: |
+          # MainActivity.java is regenerated fresh by `npx cap add android`
+          # every build (android/ isn't committed - see that step above), so
+          # like the scrollbar patch, this has to be re-applied here every
+          # build rather than committed as a one-off edit. Located by name
+          # instead of a hardcoded path since Free and Pro ship under
+          # different appIds/package folders.
+          MAINACTIVITY_SRC=$(find android/app/src/main/java -name MainActivity.java | head -n 1)
+          python3 - "$MAINACTIVITY_SRC" <<'PY'
+          import re, sys
+          path = sys.argv[1] if len(sys.argv) > 1 else ""
+          if not path:
+              raise SystemExit("ERROR: no MainActivity.java found under android/app/src/main/java.")
+          with open(path) as f:
+              content = f.read()
+          if "setSupportZoom(false)" in content:
+              print("Pinch-zoom already disabled in", path)
+              raise SystemExit(0)
+          # Match the class declaration only (not its body), so this works
+          # whether the template ships an empty body, whitespace/newlines
+          # inside the braces, or extra methods/comments.
+          pattern = r"(public\s+class\s+MainActivity\s+extends\s+BridgeActivity\s*\{)"
+          method = """
+              @Override
+              public void onStart() {
+                  super.onStart();
+                  getBridge().getWebView().getSettings().setSupportZoom(false);
+                  getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
+                  getBridge().getWebView().getSettings().setDisplayZoomControls(false);
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public void setBg(final String hex) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      int c = android.graphics.Color.parseColor(hex);
+                                      getWindow().getDecorView().setBackgroundColor(c);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      private android.view.ViewTreeObserver.OnGlobalLayoutListener nbFullL;
+                      @android.webkit.JavascriptInterface
+                      public void setFull(final boolean full) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      final android.view.View wv = getBridge().getWebView();
+                                      if (full) {
+                                          if (nbFullL == null) {
+                                              nbFullL = new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                                                  public void onGlobalLayout() {
+                                                      try {
+                                                          android.view.ViewGroup.LayoutParams lp = wv.getLayoutParams();
+                                                          if (lp instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                                              android.view.ViewGroup.MarginLayoutParams m = (android.view.ViewGroup.MarginLayoutParams) lp;
+                                                              if (m.leftMargin != 0 || m.topMargin != 0 || m.rightMargin != 0 || m.bottomMargin != 0) {
+                                                                  m.setMargins(0, 0, 0, 0);
+                                                                  wv.setLayoutParams(m);
+                                                              }
+                                                          }
+                                                      } catch (Exception e) {}
+                                                  }
+                                              };
+                                              wv.getViewTreeObserver().addOnGlobalLayoutListener(nbFullL);
+                                          }
+                                          nbFullL.onGlobalLayout();
+                                      } else if (nbFullL != null) {
+                                          wv.getViewTreeObserver().removeOnGlobalLayoutListener(nbFullL);
+                                          nbFullL = null;
+                                          androidx.core.view.ViewCompat.requestApplyInsets(wv);
+                                      }
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                      @android.webkit.JavascriptInterface
+                      public void setIcons(final boolean darkIcons) {
+                          runOnUiThread(new Runnable() {
+                              public void run() {
+                                  try {
+                                      androidx.core.view.WindowInsetsControllerCompat wc = androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+                                      wc.setAppearanceLightStatusBars(darkIcons);
+                                      wc.setAppearanceLightNavigationBars(darkIcons);
+                                      if (android.os.Build.VERSION.SDK_INT >= 29) getWindow().setNavigationBarContrastEnforced(false);
+                                  } catch (Exception e) {}
+                              }
+                          });
+                      }
+                  }, "NbBars");
+                  getBridge().getWebView().addJavascriptInterface(new Object() {
+                      @android.webkit.JavascriptInterface
+                      public String saveToDownloads(final String path, final String name, final String mime) {
+                          try {
+                              if (android.os.Build.VERSION.SDK_INT < 29) return "ERR:unsupported";
+                              String p = path.startsWith("file://") ? android.net.Uri.parse(path).getPath() : path;
+                              java.io.File src = new java.io.File(p);
+                              String cache = MainActivity.this.getCacheDir().getCanonicalPath();
+                              if (!src.getCanonicalPath().startsWith(cache + java.io.File.separator)) return "ERR:path";
+                              String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                              String safeMime = "text/html".equals(mime) ? "text/html" : "application/json";
+                              android.content.ContentValues v = new android.content.ContentValues();
+                              v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeName);
+                              v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                              v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Bluebook");
+                              android.net.Uri u = MainActivity.this.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                              if (u == null) return "ERR:insert";
+                              java.io.InputStream in = new java.io.FileInputStream(src);
+                              java.io.OutputStream out = MainActivity.this.getContentResolver().openOutputStream(u);
+                              byte[] buf = new byte[65536];
+                              int n;
+                              while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                              out.close();
+                              in.close();
+                              return "OK";
+                          } catch (Exception e) {
+                              return "ERR:" + e.getMessage();
+                          }
+                      }
+                  }, "NbFiles");
+              }
+          """
+          if not re.search(pattern, content):
+              print("----- " + path + " -----")
+              print(content)
+              raise SystemExit(
+                  "ERROR: MainActivity.java has no 'public class MainActivity "
+                  "extends BridgeActivity {' declaration - see file dump above. "
+                  "Update this patch step to match."
+              )
+          # Edge-to-edge (Android 15): the template may already define onCreate, so patch it
+          # instead of adding a duplicate; add our own only if it has none.
+          had_oncreate = re.search(r"void\s+onCreate\s*\(", content) is not None
+          content = re.sub(pattern, lambda m: m.group(1) + method, content, count=1)
+          if had_oncreate:
+              content, n = re.subn(r"(super\.onCreate\(\s*\w+\s*\);)", r"\1\n        androidx.activity.EdgeToEdge.enable(this);", content, count=1)
+              if n != 1:
+                  print(content)
+                  raise SystemExit("ERROR: existing onCreate has no super.onCreate(...) call - see file dump above. Update this patch step to match.")
+          else:
+              eto = """
+              @Override
+              public void onCreate(android.os.Bundle savedInstanceState) {
+                  androidx.activity.EdgeToEdge.enable(this);
+                  super.onCreate(savedInstanceState);
+              }
+          """
+              content = re.sub(pattern, lambda m: m.group(1) + eto, content, count=1)
+          with open(path, "w") as f:
+              f.write(content)
+          print("Disabled pinch-zoom in", path)
+          PY
+      - name: "Add microphone permission (voice notes)"
+        shell: bash
+        run: |
+          # android/ is regenerated every build, so the manifest edit is re-applied here.
+          # Capacitor's WebView asks Android for the permission at runtime once it's declared.
+          python3 - <<'PY'
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          needed = [
+              '<uses-permission android:name="android.permission.RECORD_AUDIO" />',
+              '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />',
+          ]
+          add = "".join("    " + p + "\n" for p in needed if p.split('"')[1] not in content)
+          if not add:
+              print("Audio permissions already present in", path)
+              raise SystemExit(0)
+          if "</manifest>" not in content:
+              raise SystemExit("ERROR: AndroidManifest.xml has no closing </manifest> tag - the Capacitor template may have changed. Update this patch step to match.")
+          content = content.replace("</manifest>", add + "</manifest>", 1)
+          with open(path, "w") as f:
+              f.write(content)
+          print("Added audio permissions to", path)
+          PY
+      - name: "Remove unused location permissions"
+        shell: bash
+        run: |
+          # Library manifests merge these in; the app has no geolocation code. Re-applied every build like the mic step.
+          python3 - <<'PY'
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path) as f:
+              content = f.read()
+          perms = ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+          if all('android.permission.%s" tools:node="remove"' % p in content for p in perms):
+              print("Location permissions already removed in", path)
+              raise SystemExit(0)
+          if "</manifest>" not in content or "<manifest " not in content:
+              raise SystemExit("ERROR: AndroidManifest.xml has no <manifest> tag pair - the Capacitor template may have changed. Update this patch step to match.")
+          if "xmlns:tools=" not in content:
+              content = content.replace("<manifest ", '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
+          drops = "".join('    <uses-permission android:name="android.permission.%s" tools:node="remove" />\n' % p for p in perms)
+          content = content.replace("</manifest>", drops + "</manifest>", 1)
+          with open(path, "w") as f:
+              f.write(content)
+          print("Removed location permissions in", path)
+          PY
+      - name: "Generate app icon from assets/logo.png"
+        shell: bash
+        run: |
+          npx capacitor-assets generate --android
+      - name: "Sync Capacitor (copies www/ + plugins into android/)"
+        shell: bash
+        run: |
+          npx cap sync android
+      - name: "Start full-bleed (SystemBars viewport-fit hint)"
+        shell: bash
+        run: |
+          # Capacitor 8's SystemBars pads the window by the system bar sizes until the page's first commit
+          # reveals viewport-fit=cover, then re-applies insets and the WebView grows: the splash photo sits
+          # short with a gap, then jumps. The hint tells it up front, so it passes insets through from frame 1.
+          python3 - <<'PY'
+          import json
+          path = "android/app/src/main/assets/capacitor.config.json"
+          with open(path) as f:
+              cfg = json.load(f)
+          cfg.setdefault("plugins", {}).setdefault("SystemBars", {})["initialViewportFitValueHint"] = "cover"
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+          print("SystemBars initialViewportFitValueHint = cover")
+          PY
+      - name: "Trim bundled pdf.js (source maps, sample PDF)"
+        shell: bash
+        run: |
+          PDF_DIR="android/app/src/main/assets/public/pdfjs"
+          if [ -d "$PDF_DIR" ]; then
+            find "$PDF_DIR" -name "*.map" -delete
+            rm -f "$PDF_DIR/web/compressed.tracemonkey-pldi-09.pdf"
+            echo "Trimmed pdf.js in $PDF_DIR"
+          else
+            echo "No pdf.js folder at $PDF_DIR, nothing to trim"
+          fi
+      - name: "Set Android app version"
+        shell: bash
+        run: |
+          sed -i.bak -E "s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" android/app/build.gradle
+          sed -i.bak -E "s/versionCode [0-9]+/versionCode $((PROJECT_BUILD_NUMBER + VERSION_CODE_OFFSET))/" android/app/build.gradle
+      - name: "Bump minSdkVersion to 26 (required by @capacitor/inappbrowser)"
+        shell: bash
+        run: |
+          sed -i.bak -E "s/minSdkVersion = [0-9]+/minSdkVersion = 26/" android/variables.gradle
+      - name: "Add release signing config"
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+
+          path = "android/app/build.gradle"
+          with open(path) as f:
+              content = f.read()
+          if "signingConfigs.release" in content:
+              print("Release signingConfig already present in", path)
+              raise SystemExit(0)
+
+          content = re.sub(
+              r"(release\s*\{)",
+              r"\1\n            signingConfig signingConfigs.release",
+              content,
+              count=1,
+          )
+
+          signing_configs = '''    signingConfigs {
+                  release {
+                      storeFile file(System.getenv("CM_KEYSTORE_PATH"))
+                      storePassword System.getenv("CM_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("CM_KEY_ALIAS")
+                      keyPassword System.getenv("CM_KEY_PASSWORD")
+                  }
+              }
+
+          '''
+          content = content.replace("    buildTypes {", signing_configs + "    buildTypes {", 1)
+
+          with open(path, "w") as f:
+              f.write(content)
+
+          print("Injected release signingConfig into build.gradle")
+          PY
+      - name: "Set Android SDK location"
+        shell: bash
+        run: |
+          echo "sdk.dir=${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > "$GITHUB_WORKSPACE/android/local.properties"
+      - name: "Enable R8 code shrinking and obfuscation"
+        if: matrix.target == 'aab'
+        shell: bash
+        run: |
+          # Play flags "DEX code optimization is below our threshold" when
+          # release builds aren't minified. android/ is regenerated every
+          # build, so this is re-applied here (same reason as the steps above).
+          # The keep rules matter: Capacitor/Cordova find plugins by class name
+          # and the NbBars bridge is called from JS, so those must survive R8.
+          python3 - <<'PY'
+          import re
+          gradle = "android/app/build.gradle"
+          with open(gradle) as f:
+              content = f.read()
+          if "minifyEnabled true" not in content:
+              content, n = re.subn(r"minifyEnabled\s+false", "minifyEnabled true\n            shrinkResources true", content, count=1)
+              if n != 1:
+                  raise SystemExit("ERROR: no 'minifyEnabled false' found in android/app/build.gradle - update this step to match the template.")
+              with open(gradle, "w") as f:
+                  f.write(content)
+          if "proguard-android-optimize.txt" not in content:
+              if "proguard-android.txt" not in content:
+                  raise SystemExit("ERROR: no proguard-android.txt reference in android/app/build.gradle - update this step to match the template.")
+              content = content.replace("proguard-android.txt", "proguard-android-optimize.txt")
+              with open(gradle, "w") as f:
+                  f.write(content)
+          rules = """
+          -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+          -keepattributes JavascriptInterface
+          -keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+          -keep class com.getcapacitor.** { *; }
+          -keep class org.apache.cordova.** { *; }
+          -keep public class * extends com.getcapacitor.Plugin { *; }
+          -keep class * extends org.apache.cordova.CordovaPlugin { *; }
+          -dontwarn javax.annotation.**
+          """
+          with open("android/app/proguard-rules.pro", "a") as f:
+              f.write(rules)
+          print("R8 shrinking + keep rules enabled")
+          PY
+      - name: Build signed Android App Bundle
+        if: matrix.target == 'aab'
+        shell: bash
+        run: |
+          cd android
+          ./gradlew bundleRelease
+      - name: Build signed APK
+        if: matrix.target == 'apk'
+        shell: bash
+        run: |
+          cd android
+          ./gradlew assembleRelease
+      - name: Upload AAB
+        if: matrix.target == 'aab'
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebuilder-freemium-aab
+          path: |
+            android/app/build/outputs/**/*.aab
+            android/app/build/outputs/**/mapping.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload APK
+        if: matrix.target == 'apk'
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebuilder-freemium-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
