@@ -19302,6 +19302,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      TOPICS
         swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay first media (this app)
         embed-autoplay    Settings > Autoplay first media: the viewer starts the first video or audio on a page (this app and the Worker)
+        chevron-swipe     the page chevrons keep the swipe list (swiping carries on from the story that was opened)
         keep-fresh        kept and preloaded pages follow changes to the note in the background (this app and the Worker /meta)
         swipe-keep        a swipe to a page that was not preloaded still keeps the page it left, so swiping back is instant (app only)
         back-keep         Back from a note link or the page list returns to the kept page with no reload or spinner (app only)
@@ -19372,6 +19373,26 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-26 06:26 | topics: chevron-swipe | AI: Claude (app) | Chevrons no longer switch swiping off
+       Start state
+         Tapping the previous / next chevron under a page opened the page as a 'nav' open, which clears the swipe list, so swiping stopped working on that page and on every page reached from it.
+       Work done
+         Chevrons now open with src 'chev'. _nbSwSetCtx returns early for it, so _nbSwCtx and the preloaded neighbours stay. Swiping carries on from the story that was opened: a strip list keeps its pos; a feed list has a new anchor (the list item swiping moves from, set when the list is made and moved by _nbSwGo) used by _nbSwPeek and _nbSwAfterOpen instead of the slug on screen, which can now be another page by the same author. The page list (nbAuthorPagesPick) and pasted links are unchanged ('nav', no swiping).
+       Improvements
+         Nothing else.
+       Fixed
+         Swiping lost after a chevron.
+       Found
+         After a chevron and then a swipe, the page that was on screen goes into the slot behind as before; it is not the list's previous story, so the preload replaces it with the real one (one extra load, a spinner panel if swiped back at once).
+       Important details
+         The page list still ends swiping for that story, as before.
+       Removed
+         Nothing.
+       Untested
+         Syntax checked only. Try: open a story from the Library strip, tap the next chevron, swipe both ways (strip order, from the story that was opened); same from Subscribed; then Back and the page list as before.
+       Depends on
+         Nothing new.
 
      SESSION 2026-11-26 01:14 | topics: keep-fresh | AI: Claude (app) | Kept and preloaded pages update when the note changes
        Start state
@@ -38747,7 +38768,7 @@ function _nbStoryAdForOpen(slug, authorSub) {
 //    walks the same order in reverse, across sets.
 //  - Subscribed (feed, liked) and Published (published, stories): the list as it stands on the Notes screen (read live, so pages that loaded
 //    since are included; the next page loads ahead). Its end bounces back with a toast.
-//  - anything else (pasted link, Media, a chevron or the page list inside the viewer): no swiping.
+//  - anything else (pasted link, Media, the page list inside the viewer): no swiping. [2026-11-26 06:26 | chevron-swipe] A chevron keeps the list: swiping carries on from the story that was opened, whichever page of the author is on screen.
 // The page (see SWIPE_SCRIPT in the Worker) sends the drag. The neighbour that slides in is the real page when it is already loaded in a hidden frame
 // (see _nbSwSlots), otherwise a spinner panel (#sv-poster). The header stays where it is and changes when the new story opens.
 // [2026-11-25 22:12 | embed-autoplay] The viewer's page asks once it has loaded; with Settings > Autoplay first media on, the answer tells it to start its first video or audio. Only the viewer's own frame is answered (not an ad, not a hidden neighbour frame), so the editor never autoplays.
@@ -38800,6 +38821,7 @@ function _nbSwItem(s) { return { slug: s.slug, authorSub: s.authorSub || '', tit
 function _nbSwFeedList() { return (_nbSubFeedStories || []).filter(s => s && s.slug && !/^alert:/.test(s.slug) && _nbSubStoryMatches(s)); }
 function _nbSwSetCtx(slug, markSeen, src) {
   if (src === 'sw') return; // a swipe keeps the context it moved
+  if (src === 'chev') return; // [2026-11-26 06:26 | chevron-swipe] a chevron inside the viewer only changes the page on screen: the list being swiped, its position and its preloaded neighbours stay
   if (!window._nbSt('storySwipe')) { _nbSwSlotsClear(); _nbSwCtx = null; return; } // [2026-11-25 22:20 | swipe-setting] Settings > Swipe between stories is off
   _nbSwSlotsClear(); // any other open starts a new list: whatever was preloaded belonged to the old one
   if (src === 'nav') { _nbSwCtx = null; return; }
@@ -38809,7 +38831,7 @@ function _nbSwSetCtx(slug, markSeen, src) {
     if (i >= 0) c = { kind: 'strip', items: items, pos: i, more: true, batch: null, batchRaw: null, fetching: false };
   } else if (src === 'feed') {
     const k = _nbFeedKind();
-    if (_nbIsFeedCat(_nbActiveCat) && (k === 'feed' || k === 'liked' || k === 'published' || k === 'stories') && _nbSwFeedList().some(s => s.slug === slug)) c = { kind: 'feed', tab: k };
+    if (_nbIsFeedCat(_nbActiveCat) && (k === 'feed' || k === 'liked' || k === 'published' || k === 'stories') && _nbSwFeedList().some(s => s.slug === slug)) c = { kind: 'feed', tab: k, anchor: slug }; // [2026-11-26 06:26 | chevron-swipe] anchor: the list item swiping moves from (the page on screen can be another page by the same author, reached by a chevron)
   }
   _nbSwCtx = c;
 }
@@ -38818,7 +38840,7 @@ function _nbSwAfterOpen() {
   const c = _nbSwCtx;
   if (!c) return;
   if (c.kind === 'feed') {
-    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === _nbCurrentStorySlug);
+    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === (c.anchor || _nbCurrentStorySlug));
     if (i >= 0 && i >= L.length - 2 && !_nbSubFeedDone && !_nbSubFeedLoading) _nbLoadSubFeedPage();
   } else if (c.pos >= c.items.length - 2) _nbSwFetchMore();
 }
@@ -38846,7 +38868,7 @@ function _nbSwPeek(dir) { // the story a swipe in this direction would open (dir
   if (!c) return null;
   if (c.kind === 'feed') {
     if (_nbFeedKind() !== c.tab) return null;
-    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === _nbCurrentStorySlug);
+    const L = _nbSwFeedList(), i = L.findIndex(s => s.slug === (c.anchor || _nbCurrentStorySlug));
     return (i >= 0 && L[i + dir]) ? _nbSwItem(L[i + dir]) : null;
   }
   if (c.items[c.pos + dir]) return c.items[c.pos + dir];
@@ -38864,6 +38886,7 @@ function _nbSwGo(dir, item, adopted) {
     }
     c.pos += dir;
   }
+  if (c && c.kind === 'feed') c.anchor = item.slug; // [2026-11-26 06:26 | chevron-swipe]
   nbOpenStory(item.slug, item.authorSub, item.title, !!(c && c.kind === 'strip'), 'sw');
   if (adopted) { // the page was already loaded in the hidden frame: it missed the answers a page gets on load, so they are sent now
     const w = document.getElementById('story-viewer-frame').contentWindow;
@@ -39065,7 +39088,7 @@ function _nbSwMsg(src, m) {
     }, 240);
   }
 }
-// [2026-11-25 21:55 | story-swipe] changed: src says how this open came about: 'sw' a swipe (keeps its list), 'nav' a chevron or the page list inside the viewer (no swiping for that story), 'feed' a card in Subscribed or Published; no src: the strip when markSeen is true, otherwise no swiping.
+// [2026-11-25 21:55 | story-swipe] changed: src says how this open came about: 'sw' a swipe (keeps its list), 'nav' the page list inside the viewer (no swiping for that story), 'chev' a chevron inside the viewer (keeps the list; [2026-11-26 06:26 | chevron-swipe]), 'feed' a card in Subscribed or Published; no src: the strip when markSeen is true, otherwise no swiping.
 function nbOpenStory(slug, authorSub, title, markSeen, src) { // markSeen: only a tap on a story avatar in the strip counts as viewing the story
   _nbSwSetCtx(slug, markSeen, src);
   const ad = _nbStoryAdForOpen(slug, authorSub);
@@ -39335,7 +39358,7 @@ function _nbStoryNavGo(src, dir) {
   if (!_nbStoryNavFrameOk(src)) return;
   const d = _nbStoryNavData, t = d && d.slug === _nbCurrentStorySlug ? (dir === 'prev' ? d.prev : dir === 'next' ? d.next : null) : null;
   if (!t) return;
-  nbOpenStory(t.slug, _nbCurrentStoryAuthorSub, t.title || '', false, 'nav');
+  nbOpenStory(t.slug, _nbCurrentStoryAuthorSub, t.title || '', false, 'chev'); // [2026-11-26 06:26 | chevron-swipe] keeps the swipe list (was 'nav', which dropped it)
 }
 // [2026-11-25 | page-duplicate] The + beside the list button (shown when the page's author allows copies, setting "Let others duplicate my pages"; the answer from /author-nav carries dup).
 // A tap comes back as nb-nav-dup. It asks on the same dialog as the editor's \"+\" (New canvas) with the wording adapted, then rebuilds the live page as a new note of the person's own
