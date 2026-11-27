@@ -1,0 +1,19 @@
+{
+  "appId": "com.essentialsoftware.notebuilderpro",
+  "appName": "Bluebook",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "android.my-site.name"
+  },
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": [
+        "email",
+        "profile"
+      ],
+      "serverClientId": "41762787149-mkbeh1mus5e5v2gbkvnfh1fgblmkkfvj.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": false
+    }
+  }
+}
