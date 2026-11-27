@@ -84,6 +84,14 @@ jobs:
             exit 1
           fi
           echo "appId matches PACKAGE_NAME: $CONFIG_APP_ID"
+      - name: "Debug Capacitor config"
+        shell: bash
+        run: |
+          ls -la capacitor.config.* package.json
+          head -20 capacitor.config.ts
+          npx cap --version
+          npm ls typescript @capacitor/cli @capacitor/core || true
+          npx cap config || true
       - name: "Add Android platform (skips if android/ is already committed)"
         shell: bash
         run: |
