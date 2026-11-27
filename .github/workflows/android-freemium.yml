@@ -84,6 +84,12 @@ jobs:
             exit 1
           fi
           echo "appId matches PACKAGE_NAME: $CONFIG_APP_ID"
+      - name: "Convert Capacitor config to JSON (the CLI cannot reliably load .ts)"
+        shell: bash
+        run: |
+          node --experimental-strip-types -e "import('./capacitor.config.ts').then(m => require('fs').writeFileSync('capacitor.config.json', JSON.stringify(m.default, null, 2)))"
+          grep -q '"appId": "'"$PACKAGE_NAME"'"' capacitor.config.json
+          rm capacitor.config.ts
       - name: "Add Android platform (skips if android/ is already committed)"
         shell: bash
         run: |
