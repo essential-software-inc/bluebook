@@ -8,7 +8,11 @@ const config: CapacitorConfig = {
   appName: 'Bluebook',
   webDir: 'www',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    // Real-looking origin (https://android.my-site.name) instead of the default
+    // https://localhost, so third-party embeds (TikTok) accept the app as a host.
+    // Still served from inside the APK. Do not point this at a host the app fetches for real.
+    hostname: 'android.my-site.name'
   },
   plugins: {
     // serverClientId must be the OAuth *Web application* client ID (same
@@ -27,5 +31,3 @@ const config: CapacitorConfig = {
     }
   }
 };
-
-export default config;
