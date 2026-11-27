@@ -1,6 +1,6 @@
 name: Android build (freemium)
 
-# Manual trigger only. Builds note-builder-freemium.html (repo root) with the
+# Manual trigger only. Builds index.html (repo root) with the
 # notebuilderpro identity, same steps as Codemagic's android-pro-freemium workflows.
 # Needs repo secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
 # and repo variable: VERSION_CODE_OFFSET.
@@ -64,12 +64,12 @@ jobs:
         run: |
           # Same app identity as android-pro-workflow (same appId, same
           # keystore) — the only difference is which HTML ships: this one
-          # builds note-builder-freemium.html (note-cap + RevenueCat
+          # builds the root index.html (note-cap + RevenueCat
           # paywall) instead of the ungated note-builder-pro.html, so you
           # can test either variant without maintaining two app listings.
           cp capacitor.config.pro.ts capacitor.config.ts
           mkdir -p www
-          cp note-builder-freemium.html www/index.html
+          cp index.html www/index.html
       - name: "Install npm dependencies"
         shell: bash
         run: |
