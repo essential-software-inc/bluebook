@@ -67,7 +67,8 @@ jobs:
           # builds the root index.html (note-cap + RevenueCat
           # paywall) instead of the ungated note-builder-pro.html, so you
           # can test either variant without maintaining two app listings.
-          cp capacitor.config.pro.ts capacitor.config.ts
+          rm -f capacitor.config.ts
+          cp capacitor.config.pro.json capacitor.config.json
           mkdir -p www
           cp index.html www/index.html
       - name: "Install npm dependencies"
@@ -77,19 +78,13 @@ jobs:
       - name: "Verify appId matches PACKAGE_NAME"
         shell: bash
         run: |
-          CONFIG_APP_ID=$(grep -oE "appId:[[:space:]]*'[^']+'" capacitor.config.ts | sed -E "s/appId:[[:space:]]*'([^']+)'/\1/")
+          CONFIG_APP_ID=$(grep -oE '"appId":[[:space:]]*"[^"]+"' capacitor.config.json | sed -E 's/"appId":[[:space:]]*"([^"]+)"/\1/')
           if [ "$CONFIG_APP_ID" != "$PACKAGE_NAME" ]; then
-            echo "ERROR: capacitor.config.ts appId ('$CONFIG_APP_ID') does not match PACKAGE_NAME ('$PACKAGE_NAME')."
-            echo "Fix capacitor.config.pro.ts or the PACKAGE_NAME var above before building."
+            echo "ERROR: capacitor.config.json appId ('$CONFIG_APP_ID') does not match PACKAGE_NAME ('$PACKAGE_NAME')."
+            echo "Fix capacitor.config.pro.json or the PACKAGE_NAME var above before building."
             exit 1
           fi
           echo "appId matches PACKAGE_NAME: $CONFIG_APP_ID"
-      - name: "Convert Capacitor config to JSON (the CLI cannot reliably load .ts)"
-        shell: bash
-        run: |
-          node --experimental-strip-types -e "import('./capacitor.config.ts').then(m => require('fs').writeFileSync('capacitor.config.json', JSON.stringify(m.default, null, 2)))"
-          grep -q '"appId": "'"$PACKAGE_NAME"'"' capacitor.config.json
-          rm capacitor.config.ts
       - name: "Add Android platform (skips if android/ is already committed)"
         shell: bash
         run: |
