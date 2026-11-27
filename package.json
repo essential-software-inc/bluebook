@@ -14,19 +14,19 @@
     "capacitor:sync:after": "python3 scripts/add-play-integrity.py"
   },
   "dependencies": {
-    "@capacitor/core": "latest",
-    "@capacitor/app": "latest",
-    "@capacitor/filesystem": "latest",
-    "@capacitor/inappbrowser": "latest",
-    "@capacitor/share": "latest",
-    "@southdevs/capacitor-google-auth": "latest",
-    "@revenuecat/purchases-capacitor": "latest"
+    "@capacitor/core": "8.6.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/inappbrowser": "4.1.0",
+    "@capacitor/share": "8.0.3",
+    "@southdevs/capacitor-google-auth": "7.0.0",
+    "@revenuecat/purchases-capacitor": "15.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "latest",
-    "@capacitor/cli": "latest",
-    "@capacitor/ios": "latest",
-    "@capacitor/android": "latest",
-    "typescript": "latest"
+    "@capacitor/cli": "8.6.3",
+    "@capacitor/ios": "8.6.3",
+    "@capacitor/android": "8.6.3",
+    "typescript": "^5.9.0"
   }
 }
