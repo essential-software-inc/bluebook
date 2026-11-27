@@ -52357,7 +52357,7 @@ var el=document.getElementById('nb-onboard-carousel');if(el)el.classList.add('ca
     MD.sheetCtx = { k: k, pl: inPl || '' };
     var h = '<div class="md-sh-head">' + thumbHtml(it, 'sm', true, true) + '<div class="md-tx"><div class="md-t">' + esc(titleOf(it)) + '</div><div class="md-s">' + esc(subOf(it)) + '</div></div></div>';
     h += sheetRow('addpl', 'data-k="' + esc(k) + '"', IC.plus(18), 'Add to playlist');
-    h += sheetRow('selstart', 'data-k="' + esc(k) + '"', IC.check(18), 'Select');
+    if (!MD.np) h += sheetRow('selstart', 'data-k="' + esc(k) + '"', IC.check(18), 'Select'); // [2026-11-27 | np-no-select] Select works on the list behind Now Playing, which covers it, so the row is left out there
     if (MD.queue.list.length) {
       h += sheetRow('playnext', 'data-k="' + esc(k) + '"', IC.next(18), 'Play next');
       h += sheetRow('addq', 'data-k="' + esc(k) + '"', IC.list(18), 'Add to queue');
