@@ -19329,8 +19329,8 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
 
      TOPICS
         tiktok            TikTok posts: the Social post block, the Media space, ads and short links (this app and the Worker)
-        swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay first media (this app)
-        embed-autoplay    Settings > Autoplay first media: the viewer starts the first video or audio on a page (this app and the Worker)
+        swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay video (this app)
+        embed-autoplay    Settings > Autoplay video: the viewer starts the first YouTube or Streamable video on a page (this app and the Worker)
         chevron-swipe     the page chevrons keep the swipe list (swiping carries on from the story that was opened)
         keep-fresh        kept and preloaded pages follow changes to the note in the background (this app and the Worker /meta)
         swipe-keep        a swipe to a page that was not preloaded still keeps the page it left, so swiping back is instant (app only)
@@ -31414,7 +31414,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       // [2026-11-25 22:20 | swipe-setting] Reader setting, kept on this phone. Turns the sideways swipe between stories in the viewer on or off.
       { t: 'sw', k: 'storySwipe', l: 'Swipe between notes', s: 'In the viewer, swipe left or right to go to the next or previous note. It follows the Stories strip, Subscribed, Liked and Published, in the order shown. A carousel, table or video on the page still takes its own swipes. Turn off if swipes get in the way.' },
       // [2026-11-25 22:12 | embed-autoplay] Reader setting, kept on this phone. Off by default. Only for pages opened in the viewer (never the editor): the page asks (nb-autoplay) and the answer carries the setting (see _nbAutoPlayMsg).
-      { t: 'sw', k: 'autoplayEmbed', l: 'Autoplay first media', s: 'When a page opens in the viewer, start the first video or audio on it (YouTube, Streamable, Vimeo, or a video or audio file). Pages in the editor never autoplay. Spotify and Instagram can\u2019t be started this way.' },
+      { t: 'sw', k: 'autoplayEmbed', l: 'Autoplay video', s: 'When a page opens in the viewer, start the first YouTube or Streamable video on it. Spotify, Instagram, TikTok and X embeds can\u2019t be started this way and are skipped. Pages in the editor never autoplay.' },
       { t: 'sw', k: 'hideDashes', l: 'Hide Media sidebar icon', s: 'Hide the sidebar icon at the left of the Library screen\u2019s header, next to the title. Tapping the Library title still opens Media.' }]],
     ['Library', [
       { t: 'chips', k: 'sort', l: 'Sort notes', o: [['default', 'Default'], ['edited', 'Recently edited'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['az', 'A\u2013Z']] },
@@ -38863,7 +38863,7 @@ function _nbStoryAdForOpen(slug, authorSub) {
 //  - anything else (pasted link, Media, the page list inside the viewer): no swiping. [2026-11-26 06:26 | chevron-swipe] A chevron keeps the list: swiping carries on from the story that was opened, whichever page of the author is on screen.
 // The page (see SWIPE_SCRIPT in the Worker) sends the drag. The neighbour that slides in is the real page when it is already loaded in a hidden frame
 // (see _nbSwSlots), otherwise a spinner panel (#sv-poster). The header stays where it is and changes when the new story opens.
-// [2026-11-25 22:12 | embed-autoplay] The viewer's page asks once it has loaded; with Settings > Autoplay first media on, the answer tells it to start its first video or audio. Only the viewer's own frame is answered (not an ad, not a hidden neighbour frame), so the editor never autoplays.
+// [2026-11-25 22:12 | embed-autoplay] The viewer's page asks once it has loaded; with Settings > Autoplay video on, the answer tells it to start its first YouTube or Streamable video. Only the viewer's own frame is answered (not an ad, not a hidden neighbour frame), so the editor never autoplays.
 function _nbAutoPlayMsg(src) {
   if (!_nbStoryNavFrameOk(src) || !window._nbSt('autoplayEmbed')) return;
   try { src.postMessage({ type: 'nb-autoplay-cfg', on: true }, '*'); } catch (e) {}
@@ -45787,13 +45787,13 @@ function _nbNudgeList(st, notes, now) {
     L.push({ id: 'story', title: 'Add a page to your story', body: 'None of your pages are in your story yet. Add one so people can find it.',
       label: 'Add to story', go: function () { nbOpenPublishSheet(live[0].id); } });
   }
-  // [2026-11-25 22:20 | swipe-setting] Feature tips for the story swipe and Autoplay first media. Both need stories on screen to make sense. The swipe tip stops once the person has swiped (_nbNudgeSeen in _nbSwGo); the autoplay tip stops once the setting is on, however it was turned on.
+  // [2026-11-25 22:20 | swipe-setting] Feature tips for the story swipe and Autoplay video. Both need stories on screen to make sense. The swipe tip stops once the person has swiped (_nbNudgeSeen in _nbSwGo); the autoplay tip stops once the setting is on, however it was turned on.
   if (window._nbSt('storySwipe') && !(st.seen && st.seen.storySwipe) && _nbStoriesCache.length > 1) {
     L.push({ id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.',
       label: 'Try it', go: function () { const f = _nbStoriesCache[0]; if (f) nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); } });
   }
   if (!window._nbSt('autoplayEmbed') && !(st.seen && st.seen.autoplay) && _nbStoriesCache.length > 0) {
-    L.push({ id: 'autoplay', title: 'Autoplay media on pages', body: 'Start the first video or audio on a page as soon as it opens in the viewer.',
+    L.push({ id: 'autoplay', title: 'Autoplay video on pages', body: 'Start the first YouTube or Streamable video on a page as soon as it opens in the viewer.',
       label: 'Turn on', go: function () { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} _nbNudgeSeen('autoplay'); showToast('Autoplay is on'); nbNudgeRender(); } });
   }
   if (!(st.seen && st.seen.media) && _nbNudgeHasMedia(notes)) {
