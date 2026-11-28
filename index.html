@@ -552,7 +552,8 @@ body.pink #account-body .rdlg-more-toggle {
   font-size: .84rem;
   color: #54595d;
   margin-bottom: 1rem;
-  line-height: 1.45
+  line-height: 1.45;
+  overflow-wrap: anywhere
 }
 
 #_wptoast .toast-row {
@@ -31476,7 +31477,7 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'link', l: 'Privacy policy', go: () => openPrivacy() },
       { t: 'link', l: 'Consumer terms', go: () => openConsumerTerms() },
       // [2026-11-04 19:40 | homepage-moved] moved from under About to after Consumer terms and renamed Visit homepage (small h). [2026-11-04 19:30 | homepage-sub-removed] the line under the name was removed. [2026-11-04 17:52 | homepage-tile] Opens the Worker's welcome page (GET / on the publish address) in the phone's browser.
-      { t: 'link', l: 'Visit homepage', go: () => _nbOpenExternalLink(NB_PUBLISH_API + '/') },
+      { t: 'link', l: 'Visit homepage', go: async () => { if (await _nbAskConfirm('Visit homepage?', 'This opens Bluebook\u2019s homepage in your browser.', 'Visit', 'Not now', undefined, false, true)) _nbOpenExternalLink(NB_PUBLISH_API + '/', true); } },
       { t: 'info', l: 'App version', s: 'v3.2.9' }]]
   ];
   const E = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -32644,9 +32645,20 @@ function _nbTryOpenNoteLink(url) {
   }).catch(e => _nbLog('note link history', e)).finally(() => { if (_nbParkNext === slug) _nbParkNext = null; });
   return true;
 }
-function _nbOpenExternalLink(url) {
+// Every link that leaves the app asks first, and says where it goes. A published note's own address opens in the viewer instead (no question), and the app's
+// own links (trusted, e.g. Visit homepage, which asks in its own words) skip the question.
+function _nbConfirmExternalLink(url) {
+  let shown = String(url).trim();
+  if (shown.length > 200) shown = shown.slice(0, 197) + '\u2026';
+  return _nbAskConfirm('Open this link?', shown + ' \u2014 This link opens outside Bluebook. Bluebook has nothing to do with third-party links and isn\u2019t responsible for what\u2019s on them. If a note has a link that looks harmful or misleading, don\u2019t open it and use \u201cReport an issue\u201d at the bottom of the page to report the note.', 'Open link', 'Cancel', undefined, false, true);
+}
+function _nbOpenExternalLink(url, trusted) {
   if (!url) return;
   if (_nbTryOpenNoteLink(url)) return;
+  if (trusted) { _nbOpenExternalLinkNow(url); return; }
+  return _nbConfirmExternalLink(url).then(ok => { if (ok) _nbOpenExternalLinkNow(url); });
+}
+function _nbOpenExternalLinkNow(url) {
   const Browser = _nbBrowserPlugin();
   if (Browser) {
     const failed = e => { _nbLog('open external link', e); _nbCopyLinkFallback(url); };
@@ -34368,6 +34380,7 @@ function nbSyncNow() {
     if (!pushOk) parts.push('backup failed');
     const msg = parts.length ? parts.join(', ') : 'Already up to date';
     showToast(msg.charAt(0).toUpperCase() + msg.slice(1));
+    if (pushOk) _nbNudgeDone('sync');
   });
 }
 // A session token the worker no longer recognizes (expired, or its KV
@@ -37000,6 +37013,7 @@ async function nbPublishNote() {
     try { _nbApplyPublishRules(note.id); } catch (e) { _nbLog('publish rules', e); }
     endBusy();
     if (_pubNoteId === note.id) closePublishSheet();
+    _nbNudgeDone('publish');
     nbRenderNotesScreen();
   } catch (e) {
     _nbLog('publish', e);
@@ -39329,7 +39343,7 @@ function _nbOpenStoryNow(slug, authorSub, title, markSeen) { // markSeen: only a
   // a dropped connection would otherwise just sit there showing nothing
   // with no explanation. This runs alongside it and reports the actual
   // reason once it's known, without holding up the open.
-  _nbCheckStoryReachable(slug);
+  _nbCheckStoryReachable(slug, _adopt);
   // Only a tap on a story avatar in the strip counts as viewing the story. Opening the same note from a pasted link, search,
   // Go to note, the Subscribed feed or the Media screen records nothing (the server also ignores notes that aren't live stories).
   // Your own stories count too.
@@ -39767,8 +39781,10 @@ function nbAuthorPagesPick(slug, authorSub, title) {
   }
   nbOpenStory(slug, authorSub, title || '', false, 'nav');
 }
-function _nbCheckStoryReachable(slug) {
+// adopted: a swipe landed on a page already loaded in the viewer, so a failed check (offline, server error) is not a failed load and says nothing; a note that is gone still does.
+function _nbCheckStoryReachable(slug, adopted) {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (adopted) return;
     _nbStoryGateOpen(slug);
     showToast('Couldn\u2019t load that note. No internet connection.');
     _nbStoryMarkFailed(slug);
@@ -39780,7 +39796,7 @@ function _nbCheckStoryReachable(slug) {
       // to a different one, or closing the viewer, retires this check.
       if (_nbCurrentStorySlug !== slug || !document.getElementById('story-viewer-overlay').classList.contains('open')) return;
       if (res.status === 404) { _nbStoryGateOpen(slug); showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); return; }
-      if (!res.ok) { _nbStoryGateOpen(slug); showToast('Couldn\u2019t load that note' + (_nbFailureReason(new Error('load failed: ' + res.status)) || '. Try again later.')); _nbStoryMarkFailed(slug); return; }
+      if (!res.ok) { if (adopted) return; _nbStoryGateOpen(slug); showToast('Couldn\u2019t load that note' + (_nbFailureReason(new Error('load failed: ' + res.status)) || '. Try again later.')); _nbStoryMarkFailed(slug); return; }
       return res.json().then(data => {
         if (_nbCurrentStorySlug !== slug) return;
         if (!data || !data.found) { _nbStoryGateOpen(slug); showToast('Couldn\u2019t load that note. It isn\u2019t available anymore.'); }
@@ -39790,6 +39806,7 @@ function _nbCheckStoryReachable(slug) {
     })
     .catch(e => {
       if (_nbCurrentStorySlug !== slug || !document.getElementById('story-viewer-overlay').classList.contains('open')) return;
+      if (adopted) { _nbLog('story reachability check', e); return; }
       _nbStoryGateOpen(slug);
       _nbLog('story reachability check', e);
       showToast('Couldn\u2019t load that note' + _nbFailureReason(e));
@@ -45511,6 +45528,15 @@ function _nbNudgeSave(st) { try { localStorage.setItem(NB_NUDGE_KEY, JSON.string
 // Called wherever a backup was really saved or shared (not when the share sheet was dismissed).
 function _nbNudgeBackupDone() {
   const st = _nbNudgeLoad(); st.backup = Date.now(); _nbNudgeSave(st);
+  _nbNudgeDone('backup');
+}
+// A reminder with doneBy is not counted as handled when it is tapped, only when what it asked for really happened ('backup', 'publish', 'sync'),
+// so a cancelled share sheet, a closed Publish sheet, a failed sync or a Stripe page that would not open keeps its reminder ('stripe': counted once the page
+// opened; the card also goes by itself when the account says setup is finished). _nbNudgeTapped is the doneBy card that was tapped last.
+let _nbNudgeTapped = null;
+function _nbNudgeDone(kind) {
+  const c = _nbNudgeTapped; _nbNudgeTapped = null;
+  if (c && c.doneBy === kind) { const st = _nbNudgeLoad(); _nbNudgeRecord(st, c); _nbNudgeSave(st); }
   try { nbNudgeRender(); } catch (e) {}
 }
 // Remembers that the person has used a feature, so its tip stops (Media: set when the Media screen opens).
@@ -45606,7 +45632,7 @@ async function _nbNudgeStripeGo() {
     let d = null; try { d = await res.json(); } catch (e) {}
     if (res.ok && d && d.ok && typeof d.url === 'string' && /^https:\/\/[a-z0-9.-]+\.stripe\.com\//i.test(d.url)) {
       const r = await _nbOpenExternalLinkResult(d.url);
-      if (r.opened) { if (_nbNudgeSrv) _nbNudgeSrv.at = 0; _nbNudgeSrvTry = 0; return; } // asked again when the person is back
+      if (r.opened) { _nbNudgeDone('stripe'); if (_nbNudgeSrv) _nbNudgeSrv.at = 0; _nbNudgeSrvTry = 0; return; } // asked again when the person is back
       showToast(r.copied ? 'Couldn\u2019t open Stripe. The link was copied; paste it into your browser.' : 'Couldn\u2019t open Stripe. Try again.');
       return;
     }
@@ -45672,7 +45698,7 @@ function _nbNudgeSrvItems(st, notes, own, now) {
   const uns = _nbNudgeUnsynced(notes, now);
   if (uns > 0) {
     out.social.push({ id: 'unsynced:' + uns, urgent: true, title: uns === 1 ? '1 note hasn\u2019t reached your account' : uns + ' notes haven\u2019t reached your account',
-      body: 'Auto-sync may be off or stuck. Sync now to save ' + plural(uns, 'it', 'them') + ' to your account.', label: 'Sync now', go: function () { nbSyncNow(); } });
+      body: 'Auto-sync may be off or stuck. Sync now to save ' + plural(uns, 'it', 'them') + ' to your account.', label: 'Sync now', doneBy: 'sync', go: function () { nbSyncNow(); } });
   }
   if (_nbAlertUnread > 0) {
     out.social.push({ id: 'alerts:' + _nbAlertUnread, title: _nbAlertUnread === 1 ? '1 new alert' : _nbAlertUnread + ' new alerts',
@@ -45704,7 +45730,7 @@ function _nbNudgeSrvItems(st, notes, own, now) {
       ack: function () { _nbNudgeSrvAck(function (bb, SS) { if (SS.standing) bb.tier = SS.standing.tier; }); } });
   }
   if (S && S.pay && S.pay.connected && !S.pay.ready && !S.pay.unverified && _nbNudgeHasPay(notes)) {
-    out.ads.push({ id: 'paysetup', title: 'Finish your Stripe setup', body: 'A page of yours has a payment block, but Stripe needs a few more details before it can take payments.', label: 'Continue setup', go: function () { _nbNudgeStripeGo(); } });
+    out.ads.push({ id: 'paysetup', title: 'Finish your Stripe setup', body: 'A page of yours has a payment block, but Stripe needs a few more details before it can take payments.', label: 'Continue setup', doneBy: 'stripe', go: function () { _nbNudgeStripeGo(); } });
   }
   // Tips that need the server: shown after the other settings.
   if (_nbPubCounts && _nbPubCounts.unread > 0) {
@@ -45731,7 +45757,7 @@ function _nbNudgeSrvItems(st, notes, own, now) {
     if (need > 0) {
       out.tips.push({ id: 'adnotes:' + need, title: 'Your ads need more notes',
         body: 'Every running ad needs ' + sd.minNotesPerAd + ' published notes behind it. Publish ' + need + ' more to run another ad.',
-        label: byNew.length ? 'Publish a note' : null, go: function () { if (byNew.length) nbOpenPublishSheet(byNew[0].id); } });
+        label: byNew.length ? 'Publish a note' : null, doneBy: 'publish', go: function () { if (byNew.length) nbOpenPublishSheet(byNew[0].id); } });
     }
   }
   const rf = sd && sd.referral;
@@ -45757,17 +45783,17 @@ function _nbNudgeList(st, notes, now) {
     const d = Math.floor((now - ref) / NB_NUDGE_DAY);
     L.push({ id: 'backup', urgent: d >= NB_NUDGE_URGENT_BACKUP_DAYS, title: 'Back up your notes',
       body: st.backup ? 'Your last backup was ' + d + '\u00a0days ago. Save a fresh copy of your notes.' : 'You haven\u2019t backed up your notes yet. Save a copy so they\u2019re safe.',
-      label: 'Back up now', go: function () { nbExportNotes(); } });
+      label: 'Back up now', doneBy: 'backup', go: function () { nbExportNotes(); } });
   }
   if (_nbNudgeStorageChars(now) >= NB_NUDGE_STORAGE_CHARS) {
     L.push({ id: 'storage', urgent: true, title: 'Storage is getting full', body: 'Your notes take up a lot of space on this device. Back up, then clear out what you no longer need.',
-      label: 'Back up now', go: function () { nbExportNotes(); } });
+      label: 'Back up now', doneBy: 'backup', go: function () { nbExportNotes(); } });
   }
   const ed = _nbNudgeEdited(notes);
   if (ed.length) {
     L.push({ id: 'edited', title: 'Unpublished changes',
       body: ed.length === 1 ? '\u201c' + esc(ed[0].title || 'Untitled note') + '\u201d has changes that aren\u2019t on its page yet.' : ed.length + ' of your pages have changes that aren\u2019t live yet.',
-      label: ed.length === 1 ? 'Update page' : 'Review', go: function () { nbOpenPublishSheet(ed[0].id); } });
+      label: ed.length === 1 ? 'Update page' : 'Review', doneBy: 'publish', go: function () { nbOpenPublishSheet(ed[0].id); } });
   }
   const SV = _nbNudgeSrvItems(st, notes, own, now);
   SV.social.forEach(function (x) { L.push(x); });
@@ -45847,6 +45873,7 @@ function nbNudgeRender() {
   });
   if (!pick) return off();
   _nbNudgeCur = pick;
+  if (_nbNudgeTapped && _nbNudgeTapped.id !== pick.id) _nbNudgeTapped = null;
   const key = [pick.id, pick.title, pick.body, pick.label].join('|');
   if (key === _nbNudgeKey && !host.hidden) return;
   _nbNudgeKey = key;
@@ -45880,13 +45907,16 @@ function _nbNudgeRepeatMs(st, x) {
 function nbNudgeGo() {
   const c = _nbNudgeCur;
   if (!c || !c.go) return;
-  const st0 = _nbNudgeLoad(); _nbNudgeRecord(st0, c); _nbNudgeSave(st0); // a tap counts as handled, so the next reminder waits
+  if (c.doneBy) _nbNudgeTapped = c; // counted by _nbNudgeDone once the action really happens
+  else { const st0 = _nbNudgeLoad(); _nbNudgeRecord(st0, c); _nbNudgeSave(st0); } // a tap counts as handled, so the next reminder waits
   try { c.go(); } catch (e) { _nbLog('nudge action', e); }
   try { if (c.ack) c.ack(); } catch (e) {}
+  if (!c.doneBy) { try { nbNudgeRender(); } catch (e) {} } // the tapped card goes away now, whatever its action did
 }
 function nbNudgeDismiss() {
   const c = _nbNudgeCur;
   if (!c) return;
+  _nbNudgeTapped = null;
   try { if (c.ack) c.ack(); } catch (e) {}
   const st = _nbNudgeLoad();
   _nbNudgeRecord(st, c);
@@ -47624,10 +47654,14 @@ async function _chImSend(p) {
    While the tour runs, localStorage reads and writes go to a throw-away copy in memory and every call to the
    server is answered by a stand-in below, so nothing real is read, saved or sent. Exiting reloads the app. */
 (function () {
-  const T = window._nbTour = { on: false, leaving: false };
+  const T = window._nbTour = { on: false, leaving: false, demos: [] };
   const API = NB_PUBLISH_API.replace(/\/$/, '');
-  const DEMO_AUTHOR = 'tour-u6'; // the story's author: Chidi Nwosu (PEOPLE.chidi), who owns the Lagos meetup page. His avatar is passed inline because the story ring loads it with a plain <img>
-  const DEMO_SLUG = 'lagos-meetup-run-of-show'; // that page, shown in the stories strip during the tour
+  // The stories in the strip during the tour: two, so the swipe between notes can be tried. Each is a sample page built from the note with that slug,
+  // by the person who owns it (their avatar is passed inline because the story ring loads it with a plain <img>).
+  const DEMOS = [
+    { slug: 'lagos-meetup-run-of-show', who: 'chidi', ago: 3 },  // Chidi Nwosu
+    { slug: 'brand-voice-guide', who: 'hannah', ago: 7 }         // Hannah Becker
+  ];
   const ME_SUB = 'tour-user', ME_ID = 'tour-u0';
   const MIN = 6e4, HR = 36e5, DAY = 864e5;
   const E = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -47641,7 +47675,7 @@ async function _chImSend(p) {
     daniel: { id: 'tour-u2', name: 'Daniel Reyes',   pic: true, skin: '#c98e66', hair: '#1f1610', style: 'short', beard: true, shirt: '#2f7d5b', bg: '#dff3e8' },
     priya:  { id: 'tour-u3', name: 'Priya Raman',    pic: false },
     tomas:  { id: 'tour-u4', name: 'Tomás Ferreira', pic: true, skin: '#e6b894', hair: '#5a3a22', style: 'short', glasses: true, shirt: '#6d4aa8', bg: '#ece4f8' },
-    hannah: { id: 'tour-u5', name: 'Hannah Becker',  pic: false },
+    hannah: { id: 'tour-u5', name: 'Hannah Becker',  pic: true, skin: '#b9825a', hair: '#2a1a12', style: 'long', shirt: '#b5452f', bg: '#f6dfd6' },
     chidi:  { id: 'tour-u6', name: 'Chidi Nwosu',    pic: true, skin: '#6e4630', hair: '#0e0b09', style: 'buzz', shirt: '#d98a1f', bg: '#fbefd5' },
     meilin: { id: 'tour-u7', name: 'Mei Lin Zhao',   pic: true, skin: '#f0c9a4', hair: '#15120f', style: 'bun', shirt: '#1f8aa0', bg: '#d9f0f5' },
     sofia:  { id: 'tour-u8', name: 'Sofia Alvarez',  pic: false },
@@ -48464,11 +48498,10 @@ async function _chImSend(p) {
     if (p[0] === 'account' && p[1] === 'subscriber-count') return J({ count: 128, likes: 342, following: 24, createdAt: Date.now() - 200 * DAY, mlOptOut: false });
     if (p[0] === 'account' && p[1] === 'profile-name') return J({ profileName: PEOPLE.me.name, authorId: ME_ID });
     if (p[0] === 'stories' && p.length === 1 && method === 'GET') {
-      const who = PEOPLE.chidi;
-      return J({ stories: T.demoUrl ? [{ slug: DEMO_SLUG, title: T.demoTitle, authorSub: DEMO_AUTHOR, authorProfileName: who.name, avatarMode: 'note', createdAt: Date.now() - 3 * HR, seen: false, imageUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(who)) }] : [] });
+      return J({ stories: T.demos.map(d => { const who = PEOPLE[d.who]; return { slug: d.slug, title: d.title, authorSub: who.id, authorProfileName: who.name, avatarMode: 'note', createdAt: Date.now() - d.ago * HR, seen: false, imageUrl: who.pic ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(who)) : undefined }; }) });
     }
     if (p[0] === 'stories' && p[2] === 'seen') return J({ ok: true });
-    if (p[0] === 'meta' && decodeURIComponent(p[1] || '') === DEMO_SLUG) return J({ found: true, slug: DEMO_SLUG, title: T.demoTitle, authorSub: DEMO_AUTHOR });
+    if (p[0] === 'meta') { const d = T.demos.find(x => x.slug === decodeURIComponent(p[1] || '')); if (d) return J({ found: true, slug: d.slug, title: d.title, authorSub: PEOPLE[d.who].id }); }
     if (p[0] === 'ads' && p[1] === 'mine') return J({ standing: null, creditBalance: 0 });
     if (p[0] === 'page-size' && p[1] === 'mine') return J({ baseMb: 5, maxMb: 30, balanceMb: 0, heldMb: 0, held: [], tiers: [] }); // [2026-11-02 15:30 | page-space-balance]
     return J({ error: 'Not available in the tour.' }, 503);
@@ -48491,17 +48524,20 @@ async function _chImSend(p) {
     SP = Storage.prototype; realLS = window.localStorage;
     const lenGet = Object.getOwnPropertyDescriptor(SP, 'length').get;
     saved = { getItem: SP.getItem, setItem: SP.setItem, removeItem: SP.removeItem, key: SP.key, clear: SP.clear, lenDesc: Object.getOwnPropertyDescriptor(SP, 'length'), fetch: window.fetch, fns: {}, online: Object.getOwnPropertyDescriptor(navigator, 'onLine') };
-    T.demoUrl = ''; T.demoTitle = '';
-    try { // the story's page (Chidi's Lagos meetup note) as a published page, built before the sample storage takes over, so a story opens it without a connection
-      const dn = buildNotes(Date.now()).find(x => x.publishedSlug === DEMO_SLUG);
-      T.demoUrl = URL.createObjectURL(new Blob([nbBuildStaticNoteHtml(dn, DEMO_SLUG)], { type: 'text/html' })); T.demoTitle = dn.title;
+    T.demos = [];
+    try { // each story's page as a published page, built before the sample storage takes over, so a story opens it without a connection
+      const all = buildNotes(Date.now());
+      DEMOS.forEach(d => {
+        const dn = all.find(x => x.publishedSlug === d.slug);
+        if (dn) T.demos.push({ slug: d.slug, who: d.who, ago: d.ago, title: dn.title, url: URL.createObjectURL(new Blob([nbBuildStaticNoteHtml(dn, d.slug)], { type: 'text/html' })) });
+      });
     } catch (e) { _nbLog('tour demo story', e); }
     saved.pubUrlFor = window._pubUrlFor; saved.viewerUrl = window._nbViewerUrl;
     // Library reminder: one sample card per tour, the next one each time the tour starts (the count lives in real storage, not the throw-away copy). Each button does something that works in the tour.
     const NUDGES = [
       { id: 'backup', title: 'Back up your notes', body: 'Your last backup was 41\u00a0days ago. Save a fresh copy of your notes.', label: 'Back up now', go: () => showToast('Backed up (sample)') },
       { id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.', label: 'Try it',
-        go: () => { const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); } },
+        doneBy: 'story', go: () => { const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) { nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); _nbNudgeDone('story'); } } },
       { id: 'autoplay', title: 'Autoplay video on pages', body: 'Start the first YouTube or Streamable video on a page as soon as it opens in the viewer.', label: 'Turn on',
         go: () => { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} showToast('Autoplay is on'); } },
       { id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.', label: 'Open Media', go: () => nbOpenMedia() },
@@ -48512,8 +48548,9 @@ async function _chImSend(p) {
     T.nudge = NUDGES[ni % NUDGES.length];
     saved.nudgeList = window._nbNudgeList;
     window._nbNudgeList = function () { return T.on && T.nudge ? [T.nudge] : saved.nudgeList.apply(this, arguments); };
-    window._nbViewerUrl = function (slug) { return T.on && T.demoUrl && slug === DEMO_SLUG ? T.demoUrl : saved.viewerUrl.apply(this, arguments); }; // the viewer appends ?th=.. to the address; a blob: address stops resolving with a query, so the story page showed as unavailable
-    window._pubUrlFor = function (slug) { return T.on && T.demoUrl && slug === DEMO_SLUG ? T.demoUrl : saved.pubUrlFor.apply(this, arguments); };
+    const demoUrl = slug => { const d = T.on && T.demos.find(x => x.slug === slug); return d ? d.url : null; };
+    window._nbViewerUrl = function (slug) { return demoUrl(slug) || saved.viewerUrl.apply(this, arguments); }; // the viewer appends ?th=.. to the address; a blob: address stops resolving with a query, so the story page showed as unavailable
+    window._pubUrlFor = function (slug) { return demoUrl(slug) || saved.pubUrlFor.apply(this, arguments); };
     fake = new Map();
     for (let i = 0, n = lenGet.call(realLS); i < n; i++) { const k = saved.key.call(realLS, i); if (k && !SKIP.test(k)) fake.set(k, saved.getItem.call(realLS, k)); }
     const now = Date.now(), notes = buildNotes(now);
