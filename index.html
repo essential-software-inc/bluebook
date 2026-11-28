@@ -31408,26 +31408,30 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       { t: 'sw', k: 'pauseSweep', needsGlass: true, l: 'Pause moving background', s: 'Stops the moving background colours where they are. Turn off to continue. Try it if you see glitches, flickering, or parts of the screen missing, or if the app feels slow.', after: () => { try { if (window.nbWashUserPause) window.nbWashUserPause(!!window._nbSt('pauseSweep')); } catch (e) {} } },
       // [2026-11-24 13:45 | eye-care] Warm tint over the screen to ease the glare. Kept on this phone.
       { t: 'sw', k: 'eyeCare', l: 'Eye care', s: 'Adds a soft warm tint over the whole app to cut harsh light, handy at night or in the dark. Turn off for true colours.' },
-      { t: 'sw', k: 'reduceMotion', l: 'Reduce motion', s: 'Fewer animations and transitions. Starts on if your phone has animations turned off.' },
+      { t: 'sw', k: 'reduceMotion', l: 'Reduce motion', s: 'Fewer animations and transitions. Starts on if your phone has animations turned off.' }]],
+    ['Viewer', [
       // [2026-11-03 08:38 | floating-nav] Reader setting, kept on this phone. Sent to a published page with the arrows message (nb-nav float).
-      { t: 'sw', k: 'floatPageNav', l: 'Floating page bar', s: 'Show the previous and next arrows, the list button and, on pages whose author allows copies, the + duplicate button as a see-through bar at the bottom of the page, next to the comments button, instead of under the page. The bar fades away when you stop scrolling.' },
+      { t: 'sw', k: 'floatPageNav', l: 'Floating page bar', s: 'Show a see-through bar at the bottom of a page, next to the comments button, with the previous and next arrows, the list button and, if the author allows copies, the + duplicate button. Off keeps them under the page. The bar fades away when you stop scrolling.' },
       // [2026-11-25 22:20 | swipe-setting] Reader setting, kept on this phone. Turns the sideways swipe between stories in the viewer on or off.
-      { t: 'sw', k: 'storySwipe', l: 'Swipe between notes', s: 'In the viewer, swipe left or right to go to the next or previous note. It follows the Stories strip, Subscribed, Liked and Published, in the order shown. A carousel, table or video on the page still takes its own swipes. Turn off if swipes get in the way.' },
+      { t: 'sw', k: 'storySwipe', l: 'Swipe between notes', s: 'In the viewer, swipe left or right to go to the next or previous note. It follows the list you opened the note from (the Stories strip, Subscribed, Liked or Published), in the order shown. A carousel, table or video on the page still takes its own swipes. Turn off if swipes get in the way.' },
       // [2026-11-25 22:12 | embed-autoplay] Reader setting, kept on this phone. Off by default. Only for pages opened in the viewer (never the editor): the page asks (nb-autoplay) and the answer carries the setting (see _nbAutoPlayMsg).
-      { t: 'sw', k: 'autoplayEmbed', l: 'Autoplay video', s: 'When a page opens in the viewer, start the first YouTube or Streamable video on it. Spotify, Instagram, TikTok and X embeds can\u2019t be started this way and are skipped. Pages in the editor never autoplay.' },
-      { t: 'sw', k: 'hideDashes', l: 'Hide Media sidebar icon', s: 'Hide the sidebar icon at the left of the Library screen\u2019s header, next to the title. Tapping the Library title still opens Media.' }]],
+      { t: 'sw', k: 'autoplayEmbed', l: 'Autoplay video', s: 'When a page opens in the viewer, start the first YouTube or Streamable video on it. Spotify, Instagram, TikTok and X embeds can\u2019t be started this way and are skipped. Pages in the editor never autoplay.' }]],
+    ['Navigation', [
+      { t: 'chips', k: 'startOn', l: 'Open Bluebook on', o: [['library', 'Library'], ['write', 'Write'], ['share', 'Share'], ['last', 'Last screen']] },
+      { t: 'sw', k: 'msgAlways', l: 'Always show Messages button', s: 'Keep the Messages button in the bottom bar all the time. Off shows it only when you have a note in Teams.', after: () => nbMsgNavSync() }]],
     ['Library', [
       { t: 'chips', k: 'sort', l: 'Sort notes', o: [['default', 'Default'], ['edited', 'Recently edited'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['az', 'A\u2013Z']] },
       { t: 'sw', k: 'images', l: 'Image previews', s: 'Show photos on note cards. Off gives a tighter list.' },
-      { t: 'chips', k: 'myStories', l: 'Your stories in the strip', s: 'First puts your stories in front of everyone\u2019s. After new ones puts them behind stories you haven\u2019t opened, but ahead of the grey seen ones. Last puts them after the grey seen ones.', o: [['first', 'First'], ['mid', 'After new ones'], ['last', 'Last']], set: v => { put('myStories', v); try { _nbPaintStoriesStrip(); } catch (e) { _nbLog('my stories order', e); } } },
-      { t: 'sw', k: 'stories', l: 'Stories strip', s: 'Show stories above your notes in All.', after: () => _nbSyncStoriesStripVisibility() },
-      { t: 'sw', k: 'msgAlways', l: 'Always show Messages button', s: 'Keep the Messages button in the bottom bar all the time. Off shows it only while you have a Teams note.', after: () => nbMsgNavSync() },
-      { t: 'sw', k: 'tips', l: 'Welcome tips', s: 'Show the intro carousel in the Library.' },
-      { t: 'sw', k: 'nudges', l: 'Reminders', s: 'Show a short reminder at the top of the Library now and then, such as a backup or a setting left on.', after: () => { try { nbNudgeRender(); } catch (e) {} } },
       { t: 'sw', k: 'hideLibCount', l: 'Hide Library category counts', s: 'Hide the note counts on the Library category pills (All, Favourites, Alerts, Published, Stories, Subscribed, Liked, Teams, Uncategorized and your own categories).', after: () => buildCatBar() },
-      { t: 'sw', k: 'hideMdCount', l: 'Hide Media category counts', s: 'Hide the counts on the Media tabs (Audio, Videos, Albums and Playlists).' },
+      { t: 'sw', k: 'stories', l: 'Stories strip', s: 'Show the stories strip at the top of the All category in the Library.', after: () => _nbSyncStoriesStripVisibility() },
+      { t: 'chips', k: 'myStories', l: 'Your stories in the strip', s: 'First puts your stories before other people\u2019s. After new ones puts them after stories you haven\u2019t opened yet, but before the ones you\u2019ve already seen (the grey ones). Last puts them after all of those.', o: [['first', 'First'], ['mid', 'After new ones'], ['last', 'Last']], set: v => { put('myStories', v); try { _nbPaintStoriesStrip(); } catch (e) { _nbLog('my stories order', e); } } },
+      { t: 'sw', k: 'tips', l: 'Welcome tips', s: 'Show the intro carousel in the Library.' },
+      { t: 'sw', k: 'nudges', l: 'Reminders', s: 'Show a card at the top of the All category in the Library when something needs attention, such as an overdue backup, changes not yet synced or published, new alerts, or a setting you changed and left. Feature tips show too.', after: () => { try { nbNudgeRender(); } catch (e) {} } }]],
+    ['Media', [
+      { t: 'sw', k: 'hideDashes', l: 'Hide Media sidebar icon', s: 'Hide the sidebar icon at the left of the Library screen\u2019s header, next to the title. Tapping the Library title still opens Media.' },
+      { t: 'sw', k: 'hideMdCount', l: 'Hide Media tab counts', s: 'Hide the counts on the Media tabs (Audio, Videos, Albums and Playlists).' },
       { t: 'sw', k: 'mediaSwipe', l: 'Swipe from left edge to open Media', s: 'Swipe in from the left edge of the screen, on any screen in the app, to open Media (audio, videos, albums, playlists).' }]],
-    ['All my notes', [
+    ['My published pages', [
       allRule('allStories', 'Always show in stories', 'Show all your published pages in stories now, and every page you publish from here on. Turning it off leaves your pages as they are.'),
       allRule('allShowComments', 'Always show comments', 'Show the comments button on all your published pages now, and on every page you publish from here on. Turns off \u201cHide comments on all pages\u201d.', 'allHideComments'),
       allRule('allHideComments', 'Hide comments on all pages', 'Hide the comments button and comments on all your published pages now, and on every page you publish from here on. Turns off \u201cAlways show comments\u201d.', 'allShowComments'),
@@ -31436,23 +31440,22 @@ document.getElementById('dark-btn').addEventListener('click', function (e) { e.p
       // [2026-11-25 | page-duplicate] Account choice (GET/PUT /account/page-dup), off by default.
       { t: 'sw', k: 'allowDupPages', show: () => nbIsSignedIn(), l: 'Let others duplicate my pages', s: 'Show a + button beside the list button under your published pages, for you and for everyone who views them in the app. Tapping it opens a copy of the page as a new note of their own; your page isn\u2019t changed. It shares the bar with the arrows, so it stays hidden while \u201cHide arrows and list under my pages\u201d is on.', get: () => _nbPageDupOn(), toggle: done => _nbPageDupToggle(done) }]],
     ['Writing', [
-      { t: 'chips', k: 'startOn', l: 'Open Bluebook on', o: [['library', 'Library'], ['write', 'Write'], ['share', 'Share'], ['last', 'Last screen']] },
       { t: 'chips', k: 'resetSource', l: 'Reset to original', s: 'Last saved discards your edits and goes back to the version you last saved. Published copy fetches the live page and replaces the note with it (published notes only; other notes use Last saved).', o: [['saved', 'Last saved'], ['published', 'Published copy']] },
       { t: 'sw', k: 'confirmDelete', l: 'Confirm before deleting', s: 'Off removes a note the moment you tap the bin. Published notes still ask to unpublish first.' }]],
     ['Privacy', [
-      { t: 'link', l: 'Published pages & comments', show: () => nbIsSignedIn(), s: () => { const v = _nbMlOptGet(); const d = _nbStAcctGet(); if (!d || d.mlOptOut === undefined) return '\u2014'; return v === true ? 'Kept out of app improvements' : v === false ? 'May be used to improve our apps' : 'Not chosen yet'; }, go: () => _nbStMlTileTap() },
+      { t: 'link', l: 'Use my pages & comments to improve apps', show: () => nbIsSignedIn(), s: () => { const v = _nbMlOptGet(); const d = _nbStAcctGet(); if (!d || d.mlOptOut === undefined) return '\u2014'; return v === true ? 'Kept out of app improvements' : v === false ? 'May be used to improve our apps' : 'Not chosen yet'; }, go: () => _nbStMlTileTap() },
       { t: 'chips', k: 'storyAvatar', l: 'Story picture', show: () => nbIsSignedIn(), s: 'Profile picture shows your picture on your stories (the note\u2019s first image if you have no picture). Note image shows the note\u2019s first image (your picture if the note has none). Never my picture keeps your picture off your stories and shows the note\u2019s first image (a letter if the note has none). It does not change how your teammates see your picture in team chats.', o: [['picture', 'Profile picture'], ['note', 'Note image'], ['never', 'Never my picture']], get: () => _nbStoryAvatarGet(), set: v => _nbSetDisplayPref({ storyAvatar: v }) },
       { t: 'chips', k: 'commentAs', l: 'Appear as', show: () => nbIsSignedIn(), s: 'Name & picture shows your display name and profile picture wherever you appear: on your comments, in team chats and team lists, in invitations and alerts, and on text box messages you send as yourself (Anonymous if you have no display name). Anonymous never shows them. This applies to all your comments and chat messages, old and new. Alerts that were already sent do not change.', o: [['profile', 'Name & picture'], ['anonymous', 'Anonymous']], get: () => _nbCommentAsGet(), set: v => _nbSetDisplayPref({ commentAs: v }) },
       { t: 'chips', k: 'teamInvites', l: 'Invitations to edit', show: () => nbIsSignedIn(), s: 'Everyone lets anyone who has your invite code invite you to edit their note. Nobody blocks all new invitations. You always choose whether to accept.', o: [['all', 'Everyone'], ['none', 'Nobody']], get: () => _nbTeamInvGet(), off: () => _nbTeamInvAllow === null, set: v => _nbTeamInvSet(v) },
       { t: 'link', l: 'Blocked from inviting you', show: () => nbIsSignedIn() && _nbTeamInvBlocked > 0, s: () => _nbTeamInvBlocked + (_nbTeamInvBlocked === 1 ? ' person' : ' people'), go: () => _nbTeamBlocksOpen() }]],
     ['Security', [
-      { t: 'sw', k: 'appLock', get: () => !!(window.nbLock && window.nbLock.enabled()), toggle: (done) => { const L = window.nbLock; if (!L) { done(false); return; } if (L.enabled()) L.disable(done); else L.enable(done); }, l: 'App lock', s: 'Ask for a PIN or password each time the app starts, and when you return after more than 30 seconds away. It stays on this device. If you forget it, answering your recovery question gets you back in.' },
+      { t: 'sw', k: 'appLock', get: () => !!(window.nbLock && window.nbLock.enabled()), toggle: (done) => { const L = window.nbLock; if (!L) { done(false); return; } if (L.enabled()) L.disable(done); else L.enable(done); }, l: 'App lock', s: 'Ask for a PIN or password each time the app starts, and when you return after more than 30 seconds away. The PIN or password stays on this device. If you forget it, answering your recovery question gets you back in.' },
       { t: 'link', l: 'Change PIN or password', show: () => !!(window.nbLock && window.nbLock.enabled()), go: () => window.nbLock.change(() => { try { window._nbStRender(); } catch (e) {} }) },
       { t: 'link', l: 'Change recovery question', show: () => !!(window.nbLock && window.nbLock.enabled()), go: () => window.nbLock.recovery(() => { try { window._nbStRender(); } catch (e) {} }) }]],
     ['Sync & backup', [
-      { t: 'chips', k: 'syncEvery', l: 'Auto-sync', s: 'How often Bluebook checks your account for changes. Manual only also skips the automatic backup, so tap Sync now to save your edits.', o: [[20, 'Every 20 sec'], [60, 'Every minute'], [300, 'Every 5 min'], [0, 'Manual only']] },
+      { t: 'chips', k: 'syncEvery', l: 'Auto-sync', s: 'How often Bluebook syncs with your account: it downloads changes and saves your edits. Manual only turns this off, so tap Sync now to save your edits.', o: [[20, 'Every 20 sec'], [60, 'Every minute'], [300, 'Every 5 min'], [0, 'Manual only']] },
       { t: 'link', l: 'Sync now', s: 'Upload and download your notes', go: () => { if (!nbIsSignedIn()) { showToast('Sign in to sync your notes'); return; } nbSyncNow(); } },
-      { t: 'link', l: 'Backup & restore', s: 'Save notes to a file, or restore one', go: () => openBackupSheet() }]],
+      { t: 'link', l: 'Backup & restore', s: 'Save your notes to a file, or restore them from one', go: () => openBackupSheet() }]],
     ['Account', [
       { t: 'link', l: 'Account', s: () => { const a = nbAccount(); return (a && a.email) ? window._nbMaskEmail(a.email) : 'Not signed in'; }, go: () => nbAccountBtnClick() },
       { t: 'sw', k: 'maskEmail', l: 'Hide email address', s: () => { const a = nbAccount(); return 'Show your email as ' + ((a && a.email) ? window._nbMaskedEmail(a.email) : 'b*****@gmail.com') + ' everywhere in the app: Settings, the account sheet, sign-out prompts and sign-in messages.'; }, after: () => { try { if (typeof window._nbStRefresh === 'function') window._nbStRefresh(); } catch (e) {} } },
@@ -47623,9 +47626,8 @@ async function _chImSend(p) {
 (function () {
   const T = window._nbTour = { on: false, leaving: false };
   const API = NB_PUBLISH_API.replace(/\/$/, '');
-  const DEMO_AUTHOR = 'tour-demo'; // the demo story's author id: its avatar is a drawn portrait of its own (DEMO_WHO), passed inline because the story ring loads it with a plain <img>
-  const DEMO_WHO = { name: 'Elena Marsh', skin: '#a8704a', hair: '#2a1a12', style: 'long', shirt: '#3f5fcf', bg: '#e0e7fb' };
-  const DEMO_SLUG = 'snow-leopard-field-guide'; // the built-in demo note, shown in the stories strip during the tour
+  const DEMO_AUTHOR = 'tour-u6'; // the story's author: Chidi Nwosu (PEOPLE.chidi), who owns the Lagos meetup page. His avatar is passed inline because the story ring loads it with a plain <img>
+  const DEMO_SLUG = 'lagos-meetup-run-of-show'; // that page, shown in the stories strip during the tour
   const ME_SUB = 'tour-user', ME_ID = 'tour-u0';
   const MIN = 6e4, HR = 36e5, DAY = 864e5;
   const E = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -48255,7 +48257,7 @@ async function _chImSend(p) {
   function buildNotes(now) {
     const n = (id, title, desc, category, tags, ageDays, editedMin, blocks, extra) => Object.assign({
       id: 'tour_' + id, title, desc, category, tags, content: blocks.join(''), pageBg: '', pageBgCustom: '', desktopView: false,
-      createdAt: now - ageDays * DAY, updatedAt: now - editedMin * MIN, favorite: false }, extra || {});
+      createdAt: now - ageDays * DAY, updatedAt: now - editedMin * MIN, favorite: false, acct: ME_SUB, syncBaseAt: now - editedMin * MIN }, extra || {});
     const list = [
       n('lagos', 'Lagos meetup: run of show', 'Schedule, speakers, catering and who covers what on the night.', 'Events', ['meetup', 'lagos', 'schedule'], 9, 50,
         [bH('Run of show'), bT('Doors open at 5:30 PM and talks start at 6 sharp. Networking runs until 8:30, and we lock up at 9. This is the plan for the night, in the order things happen.'), bS('Speakers'), bT('Jordan gives the five-minute welcome and runs the slides. Two lightning talks follow, ten minutes each, then Tomás gives the main session on offline-first apps. A Q&A closes the talks at 7:45.'), bS('Registration'), bT('Sofia runs the table at the door from 5:15. Name badges are printed and sorted by first name, with a box of blanks for walk-ins, who also add their email to the sign-up sheet.'), bS('Food and drink'), bT('Samosas, small chops and a vegetarian platter, ordered for about 80 people and clearly labelled. Water and soft drinks all evening. Catering arrives at 4:30 and goes on the back table, away from the projector.'), bS('After the talks'), bT('Stay for the networking hour. Chidi holds the keys, and the last ten minutes are for stacking chairs. Photos go in the shared album, and every speaker gets a thank-you message the next morning.')],
@@ -48462,7 +48464,7 @@ async function _chImSend(p) {
     if (p[0] === 'account' && p[1] === 'subscriber-count') return J({ count: 128, likes: 342, following: 24, createdAt: Date.now() - 200 * DAY, mlOptOut: false });
     if (p[0] === 'account' && p[1] === 'profile-name') return J({ profileName: PEOPLE.me.name, authorId: ME_ID });
     if (p[0] === 'stories' && p.length === 1 && method === 'GET') {
-      const who = DEMO_WHO;
+      const who = PEOPLE.chidi;
       return J({ stories: T.demoUrl ? [{ slug: DEMO_SLUG, title: T.demoTitle, authorSub: DEMO_AUTHOR, authorProfileName: who.name, avatarMode: 'note', createdAt: Date.now() - 3 * HR, seen: false, imageUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(who)) }] : [] });
     }
     if (p[0] === 'stories' && p[2] === 'seen') return J({ ok: true });
@@ -48482,7 +48484,7 @@ async function _chImSend(p) {
   // ---- switching it on and off ----
   const SKIP = /^(nb_notes_v1|nb_seeded_ids_v1|nbDeletedNoteIds|nb_draft|nb_editing_note_id_v1|nb_repost_draft|nb_favorites|nb_teams_owned|nbSessionToken|nbAccount|nbPendingInvite|nbPubCancelUntil|nb_restore_v1|nb_pendingRestoreMsg|nb_pending_actions|nb_allnotes|nb_img_|nbProUnlocked)/;
   let fake = null, realLS = null, SP = null, saved = null;
-  const BLOCKED = { nbSignInWithGoogle: 1, openSettingsSignOutConfirm: 1, nbAccountBtnClick: 1, openAccountScreen: 1, openBackupSheet: 1, nbSyncNow: 1, openPaywallDialog: 1, nbPurchasePro: 1, nbSignOut: 1, nbSignOutFromAccountScreen: 1 };
+  const BLOCKED = { nbSignInWithGoogle: 1, openSettingsSignOutConfirm: 1, nbAccountBtnClick: 1, openAccountScreen: 1, openBackupSheet: 1, openPaywallDialog: 1, nbPurchasePro: 1, nbSignOut: 1, nbSignOutFromAccountScreen: 1 };
   const QUIET = ['nbSyncPull', 'nbSyncPush', 'nbSyncPullThenPush', '_nbSchedulePullThenPush', '_pubTeamsGate', '_nbTeamsPullPublished']; // the App Lock gate answers yes (it would block the demo) and pulling a restored version has nothing real to pull
 
   function install() {
@@ -48490,11 +48492,27 @@ async function _chImSend(p) {
     const lenGet = Object.getOwnPropertyDescriptor(SP, 'length').get;
     saved = { getItem: SP.getItem, setItem: SP.setItem, removeItem: SP.removeItem, key: SP.key, clear: SP.clear, lenDesc: Object.getOwnPropertyDescriptor(SP, 'length'), fetch: window.fetch, fns: {}, online: Object.getOwnPropertyDescriptor(navigator, 'onLine') };
     T.demoUrl = ''; T.demoTitle = '';
-    try { // the built-in demo note as a published page, built before the sample storage takes over, so a story opens it without a connection
-      const dn = _nbDefaultNotes()[0];
+    try { // the story's page (Chidi's Lagos meetup note) as a published page, built before the sample storage takes over, so a story opens it without a connection
+      const dn = buildNotes(Date.now()).find(x => x.publishedSlug === DEMO_SLUG);
       T.demoUrl = URL.createObjectURL(new Blob([nbBuildStaticNoteHtml(dn, DEMO_SLUG)], { type: 'text/html' })); T.demoTitle = dn.title;
     } catch (e) { _nbLog('tour demo story', e); }
-    saved.pubUrlFor = window._pubUrlFor;
+    saved.pubUrlFor = window._pubUrlFor; saved.viewerUrl = window._nbViewerUrl;
+    // Library reminder: one sample card per tour, the next one each time the tour starts (the count lives in real storage, not the throw-away copy). Each button does something that works in the tour.
+    const NUDGES = [
+      { id: 'backup', title: 'Back up your notes', body: 'Your last backup was 41\u00a0days ago. Save a fresh copy of your notes.', label: 'Back up now', go: () => showToast('Backed up (sample)') },
+      { id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.', label: 'Try it',
+        go: () => { const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); } },
+      { id: 'autoplay', title: 'Autoplay video on pages', body: 'Start the first YouTube or Streamable video on a page as soon as it opens in the viewer.', label: 'Turn on',
+        go: () => { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} showToast('Autoplay is on'); } },
+      { id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.', label: 'Open Media', go: () => nbOpenMedia() },
+      { id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.', label: 'Open Settings', go: () => nbGoScreen('settings') }
+    ];
+    let ni = 0;
+    try { ni = parseInt(saved.getItem.call(realLS, 'nb_tour_nudge_i'), 10) || 0; saved.setItem.call(realLS, 'nb_tour_nudge_i', String((ni + 1) % NUDGES.length)); } catch (e) {}
+    T.nudge = NUDGES[ni % NUDGES.length];
+    saved.nudgeList = window._nbNudgeList;
+    window._nbNudgeList = function () { return T.on && T.nudge ? [T.nudge] : saved.nudgeList.apply(this, arguments); };
+    window._nbViewerUrl = function (slug) { return T.on && T.demoUrl && slug === DEMO_SLUG ? T.demoUrl : saved.viewerUrl.apply(this, arguments); }; // the viewer appends ?th=.. to the address; a blob: address stops resolving with a query, so the story page showed as unavailable
     window._pubUrlFor = function (slug) { return T.on && T.demoUrl && slug === DEMO_SLUG ? T.demoUrl : saved.pubUrlFor.apply(this, arguments); };
     fake = new Map();
     for (let i = 0, n = lenGet.call(realLS); i < n; i++) { const k = saved.key.call(realLS, i); if (k && !SKIP.test(k)) fake.set(k, saved.getItem.call(realLS, k)); }
@@ -48509,6 +48527,7 @@ async function _chImSend(p) {
     fake.set('nb_favorites_v1', JSON.stringify(['tour_lisbon', 'tour_garden']));
     fake.set('nb_teams_owned', JSON.stringify({ sub: ME_SUB, slugs: OWNED }));
     fake.set('nbProUnlocked', '1');
+    fake.set('nb_nudges_v1', JSON.stringify({ born: now - 30 * DAY })); // a fresh reminder state: nothing dismissed, past the quiet first days
     const mine = o => o === realLS;
     SP.getItem = function (k) { return T.on && mine(this) ? (fake.has(String(k)) ? fake.get(String(k)) : null) : saved.getItem.call(this, k); };
     SP.setItem = function (k, v) { if (T.on && mine(this)) { fake.set(String(k), String(v)); return; } return saved.setItem.call(this, k, v); };
@@ -48523,6 +48542,7 @@ async function _chImSend(p) {
     };
     try { Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true }); } catch (e) {} // the tour works without a connection
     Object.keys(BLOCKED).forEach(n => { if (typeof window[n] === 'function') { saved.fns[n] = window[n]; window[n] = function () { showToast('Not available during the tour'); return Promise.resolve(false); }; } });
+    if (typeof window.nbSyncNow === 'function') { saved.fns.nbSyncNow = window.nbSyncNow; window.nbSyncNow = function () { showToast('Everything is synced'); return Promise.resolve(true); }; } // the sample notes are synced, so this is true
     QUIET.forEach(n => { if (typeof window[n] === 'function') { saved.fns[n] = window[n]; window[n] = function () { return Promise.resolve(true); }; } });
     return notes;
   }
@@ -48532,6 +48552,8 @@ async function _chImSend(p) {
       Object.keys(saved.fns).forEach(n => { window[n] = saved.fns[n]; });
       window.fetch = saved.fetch;
       if (saved.pubUrlFor) window._pubUrlFor = saved.pubUrlFor;
+      if (saved.viewerUrl) window._nbViewerUrl = saved.viewerUrl;
+      if (saved.nudgeList) window._nbNudgeList = saved.nudgeList;
       SP.getItem = saved.getItem; SP.setItem = saved.setItem; SP.removeItem = saved.removeItem; SP.key = saved.key; SP.clear = saved.clear;
       Object.defineProperty(SP, 'length', saved.lenDesc);
       if (saved.online) Object.defineProperty(navigator, 'onLine', saved.online); else delete navigator.onLine;
