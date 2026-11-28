@@ -4045,9 +4045,9 @@ body.pink .pub-pkg-btn.selected { border-color: #c8365e; background: #ffe0ec }
 .ad-prog-link { display: inline-block; margin-top: .5rem; font-size: 11.5px; font-weight: 600; color: #3366cc; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; -webkit-tap-highlight-color: transparent }
 body.night .ad-prog-link { color: #e8e8e8 }
 body.pink .ad-prog-link { color: #bd2856 }
-#st-ads-grp { scroll-margin-top: 64px }
+#st-ads-grp { scroll-margin-top: calc(var(--hdr-h, 44px) + var(--st-sw-h, 52px) + 12px) } /* [2026-11-28 | settings-jump-offset] top bar + Settings search bar (both sticky), measured in syncStickyTop */
 /* [2026-11-28 10:44 | settings-jump] every Settings section stops just below the top bar when a reminder scrolls to it */
-#st-root .st-grp { scroll-margin-top: 64px }
+#st-root .st-grp { scroll-margin-top: calc(var(--hdr-h, 44px) + var(--st-sw-h, 52px) + 12px) }
 .pub-ad-loading { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; margin: .6rem 0; font-size: .8rem; color: rgba(32,33,34,.65) }
 .pub-ad-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; opacity: .7; animation: pub-ad-spin .7s linear infinite; flex: none }
 @keyframes pub-ad-spin { to { transform: rotate(360deg) } }
@@ -48522,10 +48522,10 @@ async function _chImSend(p) {
         return J({ ok: true, reactions: reactionsOf(m, c) });
       }
     }
-    if (p[0] === 'account' && p[1] === 'counts') return J({ published: PUBS.length, stories: 0, liked: 0, unread: 0 });
-    if (p[0] === 'account' && (p[1] === 'stories' || p[1] === 'liked-notes')) return J({ total: 0, stories: [], nextCursor: null });
-    if (p[0] === 'account' && p[1] === 'published-notes') {
-      const cards = PUBS.slice().sort((a, b) => b.publishedAt - a.publishedAt).map(x => ({ slug: x.publishedSlug, title: x.title, authorSub: ME_ID, authorProfileName: PEOPLE.me.name, publishedAt: x.publishedAt, noteCreatedAt: x.createdAt, desc: x.desc, tags: x.tags, category: x.category, seen: false, images: [], imageCount: 0, likes: 3 + x.publishedSlug.length % 17, comments: x.publishedSlug.length % 4 }));
+    if (p[0] === 'account' && p[1] === 'counts') return J({ published: PUBS.length, stories: PUBS.filter(x => OWN_STORY.has(x.publishedSlug)).length, liked: 0, unread: 0 }); // [2026-11-28 | tour-stories-count] stories follow the pages added to your story, so the count no longer drops back to 0
+    if (p[0] === 'account' && p[1] === 'liked-notes') return J({ total: 0, stories: [], nextCursor: null });
+    if (p[0] === 'account' && (p[1] === 'published-notes' || p[1] === 'stories')) {
+      const cards = PUBS.filter(x => p[1] === 'published-notes' || OWN_STORY.has(x.publishedSlug)).sort((a, b) => b.publishedAt - a.publishedAt).map(x => ({ slug: x.publishedSlug, title: x.title, authorSub: ME_ID, authorProfileName: PEOPLE.me.name, publishedAt: x.publishedAt, noteCreatedAt: x.createdAt, desc: x.desc, tags: x.tags, category: x.category, seen: false, images: [], imageCount: 0, likes: 3 + x.publishedSlug.length % 17, comments: x.publishedSlug.length % 4 }));
       return J({ total: cards.length, stories: cards, nextCursor: null });
     }
     if (p[0] === 'account' && p[1] === 'profile-image') {
@@ -48821,12 +48821,15 @@ function _nbShortTimeAgo(ts) {
 (function syncStickyTop() {
   const hdr = document.getElementById('site-header');
   if (!hdr) return;
+  const sw = document.getElementById('st-search-wrap');
   function update() {
     document.documentElement.style.setProperty('--hdr-h', (hdr.getBoundingClientRect().height - 3) + 'px');
+    // [2026-11-28 | settings-jump-offset] the Settings search bar sticks under the header, so a section scrolled to must clear both. 0 = Settings hidden: keep the last height.
+    if (sw) { const h = sw.getBoundingClientRect().height; if (h > 0) document.documentElement.style.setProperty('--st-sw-h', h + 'px'); }
   }
   update();
   if (window.ResizeObserver) {
-    new ResizeObserver(() => requestAnimationFrame(update)).observe(hdr, { box: 'border-box' });
+    const ro = new ResizeObserver(() => requestAnimationFrame(update)); ro.observe(hdr, { box: 'border-box' }); if (sw) ro.observe(sw, { box: 'border-box' });
   } else {
     window.addEventListener('resize', update, { passive: true });
   }
