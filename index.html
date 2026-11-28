@@ -48540,6 +48540,7 @@ async function _chImSend(p) {
     }
     if (p[0] === 'stories' && p[2] === 'seen') return J({ ok: true });
     if (p[0] === 'publish' && p[2] === 'stories' && method === 'PUT') { const sl = decodeURIComponent(p[1] || ''), on = !!(body && body.showInStories); if (on) OWN_STORY.add(sl); else OWN_STORY.delete(sl); return J({ ok: true, showInStories: on }); } // [2026-11-28 | tour-story-card] Show in stories: the page's own flag, kept by the app
+    if (p[0] === 'meta' && T.own && T.own[decodeURIComponent(p[1] || '')]) { const sl = decodeURIComponent(p[1]); return J({ found: true, slug: sl, title: T.own[sl].title, authorSub: ME_ID }); }
     if (p[0] === 'meta') { const d = T.demos.find(x => x.slug === decodeURIComponent(p[1] || '')); if (d) return J({ found: true, slug: d.slug, title: d.title, authorSub: PEOPLE[d.who].id }); }
     if (p[0] === 'ads' && p[1] === 'mine') return J({ standing: null, creditBalance: 0 });
     if (p[0] === 'page-size' && p[1] === 'mine') return J({ baseMb: 5, maxMb: 30, balanceMb: 0, heldMb: 0, held: [], tiers: [] }); // [2026-11-02 15:30 | page-space-balance]
@@ -48563,13 +48564,15 @@ async function _chImSend(p) {
     SP = Storage.prototype; realLS = window.localStorage;
     const lenGet = Object.getOwnPropertyDescriptor(SP, 'length').get;
     saved = { getItem: SP.getItem, setItem: SP.setItem, removeItem: SP.removeItem, key: SP.key, clear: SP.clear, lenDesc: Object.getOwnPropertyDescriptor(SP, 'length'), fetch: window.fetch, fns: {}, online: Object.getOwnPropertyDescriptor(navigator, 'onLine') };
-    T.demos = [];
-    OWN_STORY.clear();
-    try { // each story's page as a published page, built before the sample storage takes over, so a story opens it without a connection
+    T.demos = []; T.own = {};
+    OWN_STORY.clear();    try { // each story's page as a published page, built before the sample storage takes over, so a story opens it without a connection
       const all = buildNotes(Date.now());
       DEMOS.forEach(d => {
         const dn = all.find(x => x.publishedSlug === d.slug);
         if (dn) T.demos.push({ slug: d.slug, who: d.who, ago: d.ago, title: dn.title, url: URL.createObjectURL(new Blob([tourSwipePage(nbBuildStaticNoteHtml(dn, d.slug))], { type: 'text/html' })) });
+      });
+      all.filter(x => x.publishedSlug && !x.teamRole && !DEMOS.some(d => d.slug === x.publishedSlug)).forEach(x => { // your own published pages, so one added to your story opens and swipes like the others
+        T.own[x.publishedSlug] = { title: x.title, url: URL.createObjectURL(new Blob([tourSwipePage(nbBuildStaticNoteHtml(x, x.publishedSlug))], { type: 'text/html' })) };
       });
     } catch (e) { _nbLog('tour demo story', e); }
     saved.pubUrlFor = window._pubUrlFor; saved.viewerUrl = window._nbViewerUrl;
@@ -48577,7 +48580,7 @@ async function _chImSend(p) {
     const NUDGES = [
       { id: 'favourites', title: 'Keep your best notes close', body: 'Tap the heart on a note to find it fast in Favourites.', label: null },
       { id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.', label: 'Try it',
-        doneBy: 'story', go: () => { const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) { nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); _nbNudgeDone('story'); } } },
+        doneBy: 'story', go: () => { let was = true; ['storySwipe', 'stories'].forEach(k => { if (!window._nbSt(k)) { was = false; window._nbStPut(k, true); } }); if (!was) { try { _nbSyncStoriesStripVisibility(); } catch (x) {} showToast('Note swipe is on for the tour'); } const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) { nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); _nbNudgeDone('story'); } } },
       { id: 'msgs', get title() { const n = Object.keys(CH).reduce((t, k) => t + unreadOf(CH[k]), 0); return n === 1 ? '1 unread team message' : n + ' unread team messages'; }, body: 'Someone wrote in a team chat you are part of.', label: 'Open Messages', go: () => nbMessagesNavClick() }, // the real reminder, count read from the sample chats
       { id: 'story', title: 'Add a page to your story', body: 'None of your pages are in your story yet. Add one so people can find it.', label: 'Add to story', go: () => { const n = PUBS[0]; if (n) nbOpenPublishSheet(n.id); } },
       { id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.', label: 'Open Settings', go: () => nbGoSettingsSection('Security') } // [2026-11-28 10:44 | settings-jump] changed: same jump as the real reminder
@@ -48587,7 +48590,7 @@ async function _chImSend(p) {
     T.nudge = NUDGES[ni % NUDGES.length];
     saved.nudgeList = window._nbNudgeList;
     window._nbNudgeList = function () { return T.on && T.nudge ? [T.nudge] : saved.nudgeList.apply(this, arguments); };
-    const demoUrl = slug => { const d = T.on && T.demos.find(x => x.slug === slug); return d ? d.url : null; };
+    const demoUrl = slug => { const d = T.on && T.demos.find(x => x.slug === slug); if (d) return d.url; const o = T.on && T.own && T.own[slug]; return o ? o.url : null; };
     window._nbViewerUrl = function (slug) { return demoUrl(slug) || saved.viewerUrl.apply(this, arguments); }; // the viewer appends ?th=.. to the address; a blob: address stops resolving with a query, so the story page showed as unavailable
     window._pubUrlFor = function (slug) { return demoUrl(slug) || saved.pubUrlFor.apply(this, arguments); };
     fake = new Map();
