@@ -47696,6 +47696,10 @@ async function _chImSend(p) {
     { slug: 'brand-voice-guide', who: 'hannah', ago: 7 }         // Hannah Becker
   ];
   const ME_SUB = 'tour-user', ME_ID = 'tour-u0';
+  // [2026-11-28 | tour-swipe] The real Worker adds the page side of the note swipe (SWIPE_SCRIPT) and of Autoplay (PLAY_SCRIPT) to every page it serves. The tour's sample pages are built here, so they had neither and never sent nb-sw. These are the Worker's own scripts, copied unchanged (keep them in step with the Worker).
+  const SWIPE_SCRIPT = "<script>(function(){var d=document,W=window;if(W.parent===W)return;var on=false,st=null,mode=0;function tell(p,x,v){try{W.parent.postMessage({type:\"nb-sw\",p:p,x:x||0,v:v||0},\"*\")}catch(e){}}W.addEventListener(\"message\",function(e){var m=e.data;if(e.source===W.parent&&m&&m.type===\"nb-sw-cfg\")on=m.on===true});function owned(el,dx){for(;el&&el!==d.documentElement;el=el.parentElement){var n=el.nodeName;if(n===\"INPUT\"||n===\"TEXTAREA\"||n===\"SELECT\"||n===\"VIDEO\"||n===\"AUDIO\"||n===\"CANVAS\"||n===\"IFRAME\"||el.isContentEditable||(el.hasAttribute&&el.hasAttribute(\"data-nb-noswipe\")))return true;var ox=W.getComputedStyle(el).overflowX;if((ox===\"auto\"||ox===\"scroll\")&&el.scrollWidth>el.clientWidth+1){var mx=el.scrollWidth-el.clientWidth;if(dx<0?el.scrollLeft<mx-1:el.scrollLeft>1)return true}}return false}function flush(){if(st){st.raf=0;tell(\"m\",st.dx-st.bx)}}d.addEventListener(\"touchstart\",function(e){st=null;mode=0;if(!on||e.touches.length!==1)return;var t=e.touches[0];st={x:t.screenX,y:t.clientY,el:e.target,lx:t.screenX,lt:Date.now(),v:0,dx:0,bx:0,raf:0}},{passive:true,capture:true});d.addEventListener(\"touchmove\",function(e){if(!st||mode===2)return;if(e.touches.length!==1){if(mode===1)tell(\"c\");mode=2;return}var t=e.touches[0],dx=t.screenX-st.x,dy=t.clientY-st.y;if(mode===0){var ax=Math.abs(dx),ay=Math.abs(dy);if(ax<10&&ay<10)return;if(ay>=ax||owned(st.el,dx)){mode=2;return}mode=1;st.bx=dx;tell(\"s\")}if(e.cancelable)e.preventDefault();var n=Date.now();if(n>st.lt)st.v=(t.screenX-st.lx)/(n-st.lt);st.lx=t.screenX;st.lt=n;st.dx=dx;if(!st.raf)st.raf=W.requestAnimationFrame(flush)},{passive:false,capture:true});d.addEventListener(\"touchend\",function(){if(st&&mode===1)tell(\"e\",st.dx-st.bx,Date.now()-st.lt>80?0:st.v);st=null;mode=0},{passive:true,capture:true});d.addEventListener(\"touchcancel\",function(){if(st&&mode===1)tell(\"c\");st=null;mode=0},{passive:true,capture:true});tell(\"r\")})()<\/script>";
+  const PLAY_SCRIPT = "<script>(function(){var d=document,W=window;if(W.parent===W)return;function go(){var els=d.querySelectorAll(\"iframe\");for(var i=0;i<els.length;i++){var el=els[i],u;try{u=new URL(el.getAttribute(\"src\")||\"\",W.location.href)}catch(x){continue}var h=u.hostname;if(h.indexOf(\"www.\")===0)h=h.slice(4);if(h===\"youtube.com\"||h===\"youtube-nocookie.com\"||h===\"streamable.com\"){if(u.searchParams.get(\"autoplay\")===\"1\")return;u.searchParams.set(\"autoplay\",\"1\");if(h.indexOf(\"youtube\")===0)u.searchParams.set(\"playsinline\",\"1\");el.setAttribute(\"src\",u.toString());return}}}function rl(el){var s=el.getAttribute(\"src\");if(!s)return;el.setAttribute(\"src\",\"about:blank\");setTimeout(function(){el.setAttribute(\"src\",s)},60)}W.addEventListener(\"blur\",function(){setTimeout(function(){var a=d.activeElement;if(a&&a.nodeName===\"IFRAME\")a._nbT=1},0)});function stop(){var els=d.querySelectorAll(\"iframe,video,audio\");for(var i=0;i<els.length;i++){var el=els[i],n=el.nodeName;if(n===\"VIDEO\"||n===\"AUDIO\"){try{el.pause()}catch(x){}continue}var u;try{u=new URL(el.getAttribute(\"src\")||\"\",W.location.href)}catch(x){continue}if(u.searchParams.get(\"autoplay\")===\"1\"){u.searchParams.delete(\"autoplay\");el.setAttribute(\"src\",u.toString());continue}var h=u.hostname;if(h.indexOf(\"www.\")===0)h=h.slice(4);if(el._nbT||h===\"youtube.com\"||h===\"youtube-nocookie.com\"||h===\"open.spotify.com\"||h===\"streamable.com\"||h===\"tiktok.com\"){el._nbT=0;rl(el)}}}W.addEventListener(\"message\",function(e){var m=e.data;if(e.source!==W.parent||!m||m.type!==\"nb-autoplay-cfg\")return;if(m.on===false){stop();return}if(m.on!==true)return;if(d.readyState===\"complete\")go();else W.addEventListener(\"load\",go)});try{W.parent.postMessage({type:\"nb-autoplay\"},\"*\")}catch(e){}})()<\/script>";
+  const tourSwipePage = html => { const tag = SWIPE_SCRIPT + PLAY_SCRIPT, i = html.lastIndexOf('</body>'); return i < 0 ? html + tag : html.slice(0, i) + tag + html.slice(i); };
   const MIN = 6e4, HR = 36e5, DAY = 864e5;
   const E = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const hex8 = s => { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return ('00000000' + h.toString(16)).slice(-8); };
@@ -48380,7 +48384,7 @@ async function _chImSend(p) {
   }
 
   // ---- the stand-in server ----
-  let CH = {}, OWNED = [], PUBS = [];
+  let CH = {}, OWNED = [], PUBS = [], OWN_STORY = new Set(); // OWN_STORY: slugs of your pages added to your story during the tour
   const J = (o, s) => new Response(JSON.stringify(o), { status: s || 200, headers: { 'Content-Type': 'application/json' } });
   const nm = k => (PEOPLE[k] && PEOPLE[k].name) || null;
   function userOf(c, k) { const pp = PEOPLE[k], named = !!(pp && pp.name); return { name: named ? pp.name : null, authorId: named ? pp.id : null, author: k === c.owner, me: k === 'me', who: hex8(c.slug + ':' + k), pv: 0 }; }
@@ -48531,9 +48535,11 @@ async function _chImSend(p) {
     if (p[0] === 'account' && p[1] === 'subscriber-count') return J({ count: 128, likes: 342, following: 24, createdAt: Date.now() - 200 * DAY, mlOptOut: false });
     if (p[0] === 'account' && p[1] === 'profile-name') return J({ profileName: PEOPLE.me.name, authorId: ME_ID });
     if (p[0] === 'stories' && p.length === 1 && method === 'GET') {
-      return J({ stories: T.demos.map(d => { const who = PEOPLE[d.who]; return { slug: d.slug, title: d.title, authorSub: who.id, authorProfileName: who.name, avatarMode: 'note', createdAt: Date.now() - d.ago * HR, seen: false, imageUrl: who.pic ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(who)) : undefined }; }) });
+      const mine = PUBS.filter(x => OWN_STORY.has(x.publishedSlug)).map(x => ({ slug: x.publishedSlug, title: x.title, authorSub: ME_ID, authorProfileName: PEOPLE.me.name, avatarMode: 'note', createdAt: Date.now(), seen: false, imageUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(PEOPLE.me)) })); // pages you added to your story
+      return J({ stories: mine.concat(T.demos.map(d => { const who = PEOPLE[d.who]; return { slug: d.slug, title: d.title, authorSub: who.id, authorProfileName: who.name, avatarMode: 'note', createdAt: Date.now() - d.ago * HR, seen: false, imageUrl: who.pic ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(portrait(who)) : undefined }; })) });
     }
     if (p[0] === 'stories' && p[2] === 'seen') return J({ ok: true });
+    if (p[0] === 'publish' && p[2] === 'stories' && method === 'PUT') { const sl = decodeURIComponent(p[1] || ''), on = !!(body && body.showInStories); if (on) OWN_STORY.add(sl); else OWN_STORY.delete(sl); return J({ ok: true, showInStories: on }); } // [2026-11-28 | tour-story-card] Show in stories: the page's own flag, kept by the app
     if (p[0] === 'meta') { const d = T.demos.find(x => x.slug === decodeURIComponent(p[1] || '')); if (d) return J({ found: true, slug: d.slug, title: d.title, authorSub: PEOPLE[d.who].id }); }
     if (p[0] === 'ads' && p[1] === 'mine') return J({ standing: null, creditBalance: 0 });
     if (p[0] === 'page-size' && p[1] === 'mine') return J({ baseMb: 5, maxMb: 30, balanceMb: 0, heldMb: 0, held: [], tiers: [] }); // [2026-11-02 15:30 | page-space-balance]
@@ -48558,22 +48564,22 @@ async function _chImSend(p) {
     const lenGet = Object.getOwnPropertyDescriptor(SP, 'length').get;
     saved = { getItem: SP.getItem, setItem: SP.setItem, removeItem: SP.removeItem, key: SP.key, clear: SP.clear, lenDesc: Object.getOwnPropertyDescriptor(SP, 'length'), fetch: window.fetch, fns: {}, online: Object.getOwnPropertyDescriptor(navigator, 'onLine') };
     T.demos = [];
+    OWN_STORY.clear();
     try { // each story's page as a published page, built before the sample storage takes over, so a story opens it without a connection
       const all = buildNotes(Date.now());
       DEMOS.forEach(d => {
         const dn = all.find(x => x.publishedSlug === d.slug);
-        if (dn) T.demos.push({ slug: d.slug, who: d.who, ago: d.ago, title: dn.title, url: URL.createObjectURL(new Blob([nbBuildStaticNoteHtml(dn, d.slug)], { type: 'text/html' })) });
+        if (dn) T.demos.push({ slug: d.slug, who: d.who, ago: d.ago, title: dn.title, url: URL.createObjectURL(new Blob([tourSwipePage(nbBuildStaticNoteHtml(dn, d.slug))], { type: 'text/html' })) });
       });
     } catch (e) { _nbLog('tour demo story', e); }
     saved.pubUrlFor = window._pubUrlFor; saved.viewerUrl = window._nbViewerUrl;
     // Library reminder: one sample card per tour, the next one each time the tour starts (the count lives in real storage, not the throw-away copy). Each button does something that works in the tour.
     const NUDGES = [
-      { id: 'backup', title: 'Back up your notes', body: 'Your last backup was 41\u00a0days ago. Save a fresh copy of your notes.', label: 'Back up now', go: () => showToast('Backed up (sample)') },
+      { id: 'favourites', title: 'Keep your best notes close', body: 'Tap the heart on a note to find it fast in Favourites.', label: null },
       { id: 'storySwipe', title: 'Swipe between notes', body: 'Open a story or a note from Subscribed, Liked or Published, then swipe left or right to move to the next or previous one.', label: 'Try it',
         doneBy: 'story', go: () => { const f = typeof _nbStoriesCache !== 'undefined' && _nbStoriesCache[0]; if (f) { nbOpenStoryChecked(f.slug, f.authorSub || '', f.title || '', true); _nbNudgeDone('story'); } } },
-      { id: 'autoplay', title: 'Autoplay video on pages', body: 'Start the first YouTube or Streamable video on a page as soon as it opens in the viewer.', label: 'Turn on',
-        go: () => { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} showToast('Autoplay is on'); } },
-      { id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.', label: 'Open Media', go: () => nbOpenMedia() },
+      { id: 'msgs', get title() { const n = Object.keys(CH).reduce((t, k) => t + unreadOf(CH[k]), 0); return n === 1 ? '1 unread team message' : n + ' unread team messages'; }, body: 'Someone wrote in a team chat you are part of.', label: 'Open Messages', go: () => nbMessagesNavClick() }, // the real reminder, count read from the sample chats
+      { id: 'story', title: 'Add a page to your story', body: 'None of your pages are in your story yet. Add one so people can find it.', label: 'Add to story', go: () => { const n = PUBS[0]; if (n) nbOpenPublishSheet(n.id); } },
       { id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.', label: 'Open Settings', go: () => nbGoSettingsSection('Security') } // [2026-11-28 10:44 | settings-jump] changed: same jump as the real reminder
     ];
     let ni = 0;
@@ -48589,6 +48595,7 @@ async function _chImSend(p) {
     const now = Date.now(), notes = buildNotes(now);
     CH = buildChats(now);
     OWNED = notes.filter(x => x.publishedSlug && !x.teamRole).map(x => x.publishedSlug).filter(s => CH[s]);
+    notes.forEach(x => { if (x.publishedSlug && !x.teamRole) x.publishToken = 'tour-token-' + x.publishedSlug; }); // a published page of yours has a token, as on a real account
     PUBS = notes.filter(x => x.publishedSlug && !x.teamRole); // your own published notes: the Published tab and its count
     fake.set('nbSessionToken', 'tour-session');
     fake.set('nbAccount', JSON.stringify({ sub: ME_SUB, email: 'jordan.ellis@example.com', authorId: ME_ID }));
