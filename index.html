@@ -4046,6 +4046,8 @@ body.pink .pub-pkg-btn.selected { border-color: #c8365e; background: #ffe0ec }
 body.night .ad-prog-link { color: #e8e8e8 }
 body.pink .ad-prog-link { color: #bd2856 }
 #st-ads-grp { scroll-margin-top: 64px }
+/* [2026-11-28 10:44 | settings-jump] every Settings section stops just below the top bar when a reminder scrolls to it */
+#st-root .st-grp { scroll-margin-top: 64px }
 .pub-ad-loading { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; margin: .6rem 0; font-size: .8rem; color: rgba(32,33,34,.65) }
 .pub-ad-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; opacity: .7; animation: pub-ad-spin .7s linear infinite; flex: none }
 @keyframes pub-ad-spin { to { transform: rotate(360deg) } }
@@ -19329,6 +19331,7 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
      SESSION LOG   [search: SESSION LOG]   Newest first. Times are WAT (Africa/Lagos, UTC+1).
 
      TOPICS
+        settings-jump     a Library reminder that opens Settings scrolls to the section it is about, same method as the Ads & invites jump (this app)
         tiktok            TikTok posts: the Social post block, the Media space, ads and short links (this app and the Worker)
         swipe-setting     Settings > Swipe between stories switch, plus Library reminders for the story swipe and Autoplay video (this app)
         embed-autoplay    Settings > Autoplay video: the viewer starts the first YouTube or Streamable video on a page (this app and the Worker)
@@ -19403,6 +19406,27 @@ img.blk-nv-img[data-is="square"]{border-radius:0}
          api-timeout        every request to the Worker gives up when nothing answers, so Refresh and the Messages list never spin for ever (app)
          report-grip        the resize corner on the Report box and two other boxes is clear (app)
          empty-tips         seven more rotating empty state tips: publishing, Teams, text boxes, polls, payments, ads, subscribing (app)
+
+     SESSION 2026-11-28 10:44 | topics: settings-jump, library-nudges | AI: Claude (app) | Reminders that open Settings now scroll to their section
+       Start state
+         The Lock your notes reminder (and its sample in the tour) opened Settings at the top. Only the ad and invite reminders scrolled, through nbGoSettingsAds.
+       Work done
+         New nbGoSettingsSection(title): opens Settings, cancels the Settings position restore, scrolls to the section with that heading, twice (next frame and 300 ms), like nbGoSettingsAds. [2026-11-28 10:44]
+         Lock your notes (Library reminder and tour sample) now calls nbGoSettingsSection('Security'). CSS: every Settings section stops 64px below the top bar. [2026-11-28 10:44]
+       Improvements
+         Nothing else.
+       Fixed
+         Settings opening at the top for the App Lock reminder.
+       Found
+         Checked every other way into Settings (bottom bar, boot restore, Publish sheet link): only the first two do not need a section; the Publish sheet link already uses nbGoSettingsAds. Reminders that fix a setting (Eye care, Auto-sync...) do it in place and never leave Library.
+       Important details
+         Matches the section by its heading text, so renaming Security in GROUPS means changing the call. Rejected: an id on each section (more markup for one caller).
+       Depends on
+         GROUPS headings in the Settings block.
+       Removed
+         Nothing.
+       Final state
+         Not run in a browser. Open Library with App Lock off and 3 or more notes, tap Open Settings on the reminder: Settings should land with Security at the top.
 
      SESSION 2026-11-27 07:26 | topics: tiktok | AI: Claude (app) | TikTok frame no longer has blank space under the video
        Start state
@@ -42934,6 +42958,15 @@ function nbGoSettingsAds() {
   requestAnimationFrame(jump);
   setTimeout(jump, 300); // the publish sheet may still be closing / locking scroll on the first pass
 }
+// [2026-11-28 10:44 | settings-jump] Opens Settings and scrolls to one section by its heading (Security, Sync & backup...). Same method as nbGoSettingsAds:
+// the Settings position restore that nbGoScreen starts is cancelled, then the jump runs twice because Settings may redraw once. A heading that is not there leaves Settings at the top.
+function nbGoSettingsSection(title) {
+  nbGoScreen('settings');
+  _nbCatYCancel();
+  const jump = () => { const hs = document.querySelectorAll('#st-root .st-grp > .st-h'); for (let i = 0; i < hs.length; i++) { if (hs[i].textContent === title) { hs[i].parentElement.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } } };
+  requestAnimationFrame(jump);
+  setTimeout(jump, 300);
+}
 function _pubRenderAdStanding(targetId, opts) {
   const el = document.getElementById(targetId || 'pub-ad-standing');
   if (!el) return;
@@ -45831,7 +45864,7 @@ function _nbNudgeList(st, notes, now) {
   }
   if (window.nbLock && !window.nbLock.enabled() && notes.length >= 3) {
     L.push({ id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.',
-      label: 'Open Settings', go: function () { nbGoScreen('settings'); } });
+      label: 'Open Settings', go: function () { nbGoSettingsSection('Security'); } }); // [2026-11-28 10:44 | settings-jump] changed: opens Settings at the Security section, not the top
   }
   if (!nbIsSignedIn() && notes.length >= 3) {
     L.push({ id: 'signIn', title: 'Sign in for alerts', body: 'Sign in to hear about comments and likes on your pages.',
@@ -48541,7 +48574,7 @@ async function _chImSend(p) {
       { id: 'autoplay', title: 'Autoplay video on pages', body: 'Start the first YouTube or Streamable video on a page as soon as it opens in the viewer.', label: 'Turn on',
         go: () => { window._nbStPut('autoplayEmbed', true); try { window._nbStRefresh(); } catch (x) {} showToast('Autoplay is on'); } },
       { id: 'media', title: 'Play your media in one place', body: 'Some of your notes have YouTube, Spotify or Streamable links. Media gathers them into one list.', label: 'Open Media', go: () => nbOpenMedia() },
-      { id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.', label: 'Open Settings', go: () => nbGoScreen('settings') }
+      { id: 'appLock', title: 'Lock your notes', body: 'Add a PIN or password so only you can open Bluebook.', label: 'Open Settings', go: () => nbGoSettingsSection('Security') } // [2026-11-28 10:44 | settings-jump] changed: same jump as the real reminder
     ];
     let ni = 0;
     try { ni = parseInt(saved.getItem.call(realLS, 'nb_tour_nudge_i'), 10) || 0; saved.setItem.call(realLS, 'nb_tour_nudge_i', String((ni + 1) % NUDGES.length)); } catch (e) {}
